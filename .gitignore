@@ -4,3 +4,4 @@ __pycache__/
 *.vvp
 .DS_Store
 tasks/
+.server_logs/
