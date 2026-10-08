@@ -1,0 +1,9 @@
+{
+  "name": "fifo",
+  "description": "Synchronous FIFO, show-ahead read, power-of-2 depth",
+  "source": "original, written in-house",
+  "license": "owned by rtl-env founders",
+  "created": "2026-10-07",
+  "kind": "sequential",
+  "top": "fifo"
+}
