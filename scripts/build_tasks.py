@@ -145,10 +145,11 @@ def main():
 
     cols = ["generated", "duplicates", "compile_error", "timeout", "pass", "capped", "kept"]
     names = ["generated", "dupes", "no_compile", "hang", "survived", "capped", "kept"]
-    table = [f"{'seed':<10}" + "".join(f"{n:>11}" for n in names)]
+    w = max([len("seed")] + [len(r["seed"]) for r in rows]) + 2
+    table = [f"{'seed':<{w}}" + "".join(f"{n:>11}" for n in names)]
     total = {"seed": "TOTAL", **{c: sum(r[c] for r in rows) for c in cols}}
     for row in rows + [total]:
-        table.append(f"{row['seed']:<10}" + "".join(f"{row[c]:>11}" for c in cols))
+        table.append(f"{row['seed']:<{w}}" + "".join(f"{row[c]:>11}" for c in cols))
     by_type = Counter(json.loads((TASKS / f"task_{n:04d}" / "meta.json").read_text())["bug"]["type"]
                       for n in range(1, len(all_tasks) + 1))
     table += ["", "kept by bug type: " + ", ".join(f"{k} {v}" for k, v in sorted(by_type.items()))]

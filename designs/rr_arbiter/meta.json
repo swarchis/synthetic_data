@@ -1,0 +1,9 @@
+{
+  "name": "rr_arbiter",
+  "description": "4-way round-robin arbiter with registered one-hot grant",
+  "source": "original, written in-house",
+  "license": "owned by rtl-env founders",
+  "created": "2026-10-08",
+  "kind": "fsm",
+  "top": "rr_arbiter"
+}

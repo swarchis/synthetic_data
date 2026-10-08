@@ -1,0 +1,9 @@
+{
+  "name": "shift_reg",
+  "description": "8-bit loadable shift register, shifts left or right with serial in and out",
+  "source": "original, written in-house",
+  "license": "owned by rtl-env founders",
+  "created": "2026-10-08",
+  "kind": "sequential",
+  "top": "shift_reg"
+}

@@ -83,6 +83,7 @@ class Design:
         self.signals = {}      # name -> width text, e.g. "[AW:0]" or "" for 1 bit
         self.inputs = set()
         self.clocks = set()    # anything in @(...): never swapped in or out
+        self.states = {}       # localparam name -> bit size, for `localparam S_IDLE = 2'd0;`
         self.mutable = [True] * len(self.toks)
         self._scan()
         self._find_assignments()
@@ -148,8 +149,19 @@ class Design:
             t = toks[k].text
             if t in ("parameter", "localparam"):
                 k += 1
-                while k <= end and toks[k].text not in (",", ";", ")"):
-                    k = self.pairs.get(k, k) + 1 if toks[k].text in "([{" else k + 1
+                # One or more `NAME = value` pairs separated by commas.
+                while k + 1 <= end and is_signal_name(toks[k]) and toks[k + 1].text == "=":
+                    name, v = toks[k].text, k + 2
+                    k = v
+                    while k <= end and toks[k].text not in (",", ";", ")"):
+                        k = self.pairs.get(k, k) + 1 if toks[k].text in "([{" else k + 1
+                    if t == "localparam" and k - 1 == v and toks[v].kind == "number" and "'" in toks[v].text:
+                        # A sized constant like 2'd1: likely a state encoding.
+                        self.states[name] = toks[v].text.split("'")[0]
+                    if k <= end and toks[k].text == "," and k + 2 <= end and toks[k + 2].text == "=":
+                        k += 1
+                        continue
+                    break
                 k += 1
                 continue
             if t not in SIGNAL_KW:
@@ -201,16 +213,23 @@ class Design:
                 s, kind = i - 1, "declaration"    # wire x = ...;
             else:
                 continue
-            name = self.toks[s].text
-            if not is_signal_name(self.toks[s]):
+            if self.toks[s].text == "{":
+                # `{carry, y} = ...` writes every signal inside the braces.
+                targets = [k for k in range(s + 1, self.pairs[s]) if is_signal_name(self.toks[k])]
+                body_start = self.pairs[s] + 1
+            elif is_signal_name(self.toks[s]):
+                targets, body_start = [s], s + 1
+            else:
                 continue
-            self.target_tok[s] = kind
+            names = {self.toks[k].text for k in targets}
+            for k in targets:
+                self.target_tok[k] = kind
             if kind == "procedural":
-                self.regs.add(name)
+                self.regs |= names
             end = self._statement_end(i)
-            for k in range(s + 1, end + 1):
-                self.writes[k] = name
-            self._group(s + 1, end)
+            for k in range(body_start, end + 1):
+                self.writes[k] = names
+            self._group(body_start, end)
         for i, t in enumerate(self.toks):
             if t.text == "if" and i + 1 < len(self.toks) and self.toks[i + 1].text == "(":
                 self._group(i + 2, self.pairs[i + 1] - 1)
@@ -233,7 +252,7 @@ class Design:
             pool = self.regs
         else:
             # Skip names already in this expression: `full && !full` is a giveaway.
-            pool = set(self.signals) - {self.writes.get(i)} - self.reads_with.get(i, set())
+            pool = set(self.signals) - self.writes.get(i, set()) - self.reads_with.get(i, set())
         width = self.signals[name]
         return sorted(n for n in pool - self.clocks - {name} if self.signals.get(n) == width)
 
@@ -320,17 +339,25 @@ def mutate(src):
             if i > 0 and toks[i - 1].text in ("+", "-"):
                 options = [o for o in options if o != "0"]   # `x + 0` is a giveaway
             # `y <= 1;` on a 1-bit y: only 0 is a different value (2 truncates to 0).
+            targets = d.writes.get(i, set())
             if x in ("0", "1") and toks[i - 1].text in ("<=", "=") and toks[i + 1].text == ";" \
-                    and d.signals.get(d.writes.get(i)) == "":
+                    and len(targets) == 1 and d.signals.get(next(iter(targets))) == "":
                 options = ["1" if x == "0" else "0"]
             swap("const_change", t, options)
         elif x == "if" and i + 1 < len(toks) and toks[i + 1].text == "(":
             close = d.pairs[i + 1]
             inner = d.text(i + 2, close - 1)
-            new = f"(!{inner})" if close == i + 3 else f"(!({inner}))"   # `(!rst)`, not `(!(rst))`
+            # `(!rst)` and `(!req[i])`, not `(!(rst))`; keep parens only around real expressions.
+            simple = close == i + 3 or (is_signal_name(toks[i + 2]) and toks[i + 3].text == "["
+                                        and d.pairs[i + 3] == close - 1)
+            new = f"(!{inner})" if simple else f"(!({inner}))"
             edits.append(("invert_if", toks[i + 1].start, toks[close].end, new))
         elif x in d.signals:
             swap("signal_swap", t, d.swap_options(i))
+        elif x in d.states:
+            # Wrong state name: `state <= S_GREEN` where S_RED was meant, or a wrong case label.
+            others = sorted(n for n, size in d.states.items() if size == d.states[x] and n != x)
+            swap("state_swap", t, others)
 
         # Delete a whole assignment, but only when it sits alone on its own line
         # inside a sequence of statements, so the result still reads naturally.
@@ -354,6 +381,8 @@ def mutate(src):
         line = lineno(src, start)
         before = src.splitlines()[line - 1].strip()
         after = "(line deleted)" if op == "delete_stmt" else out.splitlines()[line - 1].strip()
+        if re.search(r"\?\s*([\w']+)\s*:\s*\1\s*[;)]", after):
+            continue    # `c ? 0 : 0` gives the same answer both ways: a giveaway
         mutants.append({"op": op, "line": line, "before": before, "after": after, "source": out})
     return mutants, dupes
 

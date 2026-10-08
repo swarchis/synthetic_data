@@ -1,0 +1,9 @@
+{
+  "name": "edge_detector",
+  "description": "Registered rising/falling edge detector with one-cycle pulses",
+  "source": "original, written in-house",
+  "license": "owned by rtl-env founders",
+  "created": "2026-10-08",
+  "kind": "sequential",
+  "top": "edge_detector"
+}

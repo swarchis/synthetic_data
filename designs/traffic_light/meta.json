@@ -1,0 +1,9 @@
+{
+  "name": "traffic_light",
+  "description": "Traffic light FSM (green/yellow/red) with timers and a pedestrian request that shortens green",
+  "source": "original, written in-house",
+  "license": "owned by rtl-env founders",
+  "created": "2026-10-08",
+  "kind": "fsm",
+  "top": "traffic_light"
+}

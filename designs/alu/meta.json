@@ -1,0 +1,9 @@
+{
+  "name": "alu",
+  "description": "8-bit combinational ALU: add, sub, and, or, xor, shifts, set-less-than, carry and zero flags",
+  "source": "original, written in-house",
+  "license": "owned by rtl-env founders",
+  "created": "2026-10-08",
+  "kind": "combinational",
+  "top": "alu"
+}

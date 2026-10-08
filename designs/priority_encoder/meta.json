@@ -1,0 +1,9 @@
+{
+  "name": "priority_encoder",
+  "description": "8-input priority encoder, highest index wins, with valid and one-hot outputs",
+  "source": "original, written in-house",
+  "license": "owned by rtl-env founders",
+  "created": "2026-10-08",
+  "kind": "combinational",
+  "top": "priority_encoder"
+}

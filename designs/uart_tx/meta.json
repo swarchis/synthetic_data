@@ -1,0 +1,9 @@
+{
+  "name": "uart_tx",
+  "description": "UART 8N1 transmitter FSM with configurable clocks per bit, busy and done outputs",
+  "source": "original, written in-house",
+  "license": "owned by rtl-env founders",
+  "created": "2026-10-08",
+  "kind": "fsm",
+  "top": "uart_tx"
+}

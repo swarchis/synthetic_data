@@ -1,0 +1,9 @@
+{
+  "name": "pwm",
+  "description": "8-bit PWM generator with programmable period and duty, enable, and wrap pulse",
+  "source": "original, written in-house",
+  "license": "owned by rtl-env founders",
+  "created": "2026-10-08",
+  "kind": "sequential",
+  "top": "pwm"
+}

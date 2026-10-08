@@ -1,0 +1,29 @@
+model      qwen2.5-coder:7b  (think: off, prompt v1)
+started    2026-10-08T18:13:24
+pass@1     162/322 = 50.3%
+
+outcomes   pass 162, fail 155, compile_error 5
+time       108.8 min total, 20s per task, 441 output tokens per task
+
+by bug type
+  arith_flip     18/33
+  compare_flip   12/26
+  const_change   39/73
+  delete_stmt    17/42
+  drop_not       4/6
+  invert_if      10/27
+  logic_flip     9/15
+  signal_swap    45/80
+  state_swap     8/20
+
+by seed
+  alu            23/31
+  counter        3/4
+  edge_detector  21/25
+  fifo           12/42
+  priority_encoder 5/10
+  pwm            26/29
+  rr_arbiter     20/35
+  shift_reg      17/24
+  traffic_light  24/63
+  uart_tx        11/59
