@@ -21,7 +21,7 @@ TOKEN_RE = re.compile(r"""
     (?P<comment>//[^\n]*|/\*.*?\*/)
   | (?P<string>"(?:\\.|[^"\\])*")
   | (?P<space>\s+)
-  | (?P<number>\d*\s*'[sS]?[bBoOdDhH]\s*[0-9a-fA-FxXzZ_?]+|\d[\d_]*)
+  | (?P<number>\d*\s*'[sS]?[bBoOdDhH]\s*[0-9a-fA-FxXzZ_?]+|'[01xXzZ]|\d[\d_]*)
   | (?P<ident>[A-Za-z_][A-Za-z0-9_$]*|\$[A-Za-z_][A-Za-z0-9_$]*|`[A-Za-z_][A-Za-z0-9_]*)
   | (?P<op>===|!==|<<<|>>>|==|!=|<=|>=|&&|\|\||<<|>>|\*\*|~&|~\||~\^|\^~|[-+*/%<>=!~&|^?:;,.()\[\]{}@#])
 """, re.S | re.X)
@@ -287,6 +287,8 @@ def lineno(src, pos):
 
 def mutate_number(text):
     """Nearby values for a numeric literal, in the same format."""
+    if text.startswith("'"):
+        return []                       # SystemVerilog fill literal like '0: no nearby value
     clean = text.replace("_", "").replace(" ", "")
     m = re.fullmatch(r"(\d*)'([sS]?)([bBoOdDhH])(.+)", clean)
     if not m:
@@ -383,8 +385,21 @@ def mutate(src):
         after = "(line deleted)" if op == "delete_stmt" else out.splitlines()[line - 1].strip()
         if re.search(r"\?\s*([\w']+)\s*:\s*\1\s*[;)]", after):
             continue    # `c ? 0 : 0` gives the same answer both ways: a giveaway
-        mutants.append({"op": op, "line": line, "before": before, "after": after, "source": out})
+        mutants.append({"op": op, "line": line, "before": before, "after": after, "source": out,
+                        "edit": (start, end, new)})
     return mutants, dupes
+
+
+def combine(src, mutants):
+    """Apply several single-bug edits at once. Returns None if any two overlap."""
+    edits = sorted((m["edit"] for m in mutants), key=lambda e: e[0])
+    for (s1, e1, _), (s2, _, _) in zip(edits, edits[1:]):
+        if s2 < e1 or s1 == s2:
+            return None
+    out = src
+    for start, end, new in reversed(edits):     # back to front, so earlier offsets stay valid
+        out = out[:start] + new + out[end:]
+    return out
 
 
 if __name__ == "__main__":

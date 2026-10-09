@@ -1,0 +1,19 @@
+CVDP v1.1.0, non-agentic code generation, no-commercial subset (302 problems)
+model      openai:gpt-5.6-luna, reasoning effort medium, 1 sample per problem (pass@1, n=1)
+prompts    CVDP's own exported prompts, unchanged (scripts/cvdp_infer.py), 8 requests at a time
+harness    NVlabs/cvdp_benchmark @ 8e894cf, nvidia/cvdp-sim:v1.0.0 built locally (arm64), graded with -t 4
+date       2026-10-09, answering ~10 min, $4.01 billed at $1/M in, $6/M out
+
+pass@1     153/302 = 50.7%     (qwen2.5-coder 7B: 39/302 = 12.9%)
+
+by category                        easy      medium    total           qwen 7B
+  cid002 code completion          27/48     17/46     44/94   46.8%    11.7%
+  cid003 spec to RTL              28/41     14/37     42/78   53.8%    16.7%
+  cid004 code modification        22/30     11/25     33/55   60.0%    14.5%
+  cid007 lint / QoR improvement   10/22      2/18     12/40   30.0%     7.5%
+  cid016 debugging / bug fixing   16/21      6/14     22/35   62.9%    11.4%
+
+outcomes   passed 153, wrong behavior 101, did not compile 17, did not build 16, not smaller 8, timeout 7
+overlap    both pass 32, Luna only 121, Qwen only 7, neither 142
+
+compare: same model on our tasks (560 tasks) = 559/560 = 99.8%

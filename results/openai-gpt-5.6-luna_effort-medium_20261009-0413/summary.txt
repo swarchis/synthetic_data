@@ -1,0 +1,28 @@
+model      openai:gpt-5.6-luna  (effort: medium, prompt v2)
+started    2026-10-09T04:13:05
+pass@1     10/10 = 100.0%
+
+outcomes   pass 10
+time       1.5 min total, 9s per task, 741 output tokens per task
+cost       $0.0535 of $1.00 budget (prices in/out per 1M: $1.0 / $6.0)
+
+by task type
+  bugfix         5/5
+  multibug       5/5
+
+by label
+  compare_flip   1/1
+  delete_stmt    1/1
+  drop_not       1/1
+  invert_if      1/1
+  logic_flip     1/1
+  multi2         3/3
+  multi3         2/2
+
+by seed
+  alu            4/4
+  fifo           1/1
+  priority_encoder 1/1
+  pwm            1/1
+  traffic_light  2/2
+  uart_tx        1/1

@@ -36,133 +36,58 @@ Each run writes results/<model>_<settings>_<time>/:
 
 import argparse
 import json
-import math
 import os
 import re
 import sys
 import time
-import urllib.error
-import urllib.request
 from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from grade import grade
+from llm import Budget, actual_cost, ask_ollama, ask_openai, is_paid, run_pool, worst_case_cost
 
 ROOT = Path(__file__).resolve().parent.parent
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://host.docker.internal:11434")
-OPENAI_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-PROMPT_VERSION = "v1"
+PROMPT_VERSION = "v2"   # v2 adds prompts for new task types; the bugfix prompt is unchanged from v1
 MAX_ERRORS_IN_A_ROW = 3
 
 SYSTEM = "You are an expert digital design and verification engineer."
 
-PROMPT = """The Verilog module below does not match its specification. It contains exactly one bug.
-Find the bug and return the complete corrected file.
+INSTRUCTIONS = {
+    "bugfix": ("The Verilog module below does not match its specification. It contains exactly one bug.\n"
+               "Find the bug and return the complete corrected file.",
+               "- Change only what is needed to fix the bug.", "Buggy file"),
+    "multibug": ("The Verilog module below does not match its specification. It contains one or more bugs.\n"
+                 "Find and fix all of them, and return the complete corrected file.",
+                 "- Change only what is needed to fix the bugs.", "Buggy file"),
+    "complete": ("The Verilog module below is incomplete: some logic was removed and replaced with a\n"
+                 "`// TODO: missing logic` comment. Write the missing logic so the module matches its\n"
+                 "specification, and return the complete file.",
+                 "- Keep the existing code; add what is missing.", "Incomplete file"),
+    "module": ("The Verilog module below has only its interface. Write the body so the module matches\n"
+               "its specification, and return the complete file.",
+               "- Declare any internal signals you need.", "Incomplete file"),
+}
+
+PROMPT = """{task}
 
 Rules:
 - Keep the module name, ports, and parameters exactly the same.
-- Change only what is needed to fix the bug.
+{rule}
 - Reply with the full corrected file in a single ```verilog code block.
 
 ## Specification
 
 {spec}
 
-## Buggy file: {top}.v
+## {label}: {top}.v
 
 ```verilog
 {buggy}
 ```
 """
-
-
-class RequestFailed(Exception):
-    pass
-
-
-def is_paid(model):
-    return model.startswith("openai:")
-
-
-def post(url, body, headers, timeout):
-    req = urllib.request.Request(url, data=json.dumps(body).encode(),
-                                 headers={"Content-Type": "application/json", **headers})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.load(resp)
-
-
-def ask_ollama(model, prompt, cfg):
-    """Returns (answer, thinking, stats)."""
-    think = cfg["think"]
-    body = {
-        "model": model,
-        "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}],
-        "stream": False,
-        "options": {"temperature": 0, "seed": 0, "num_ctx": 16384 if think == "on" else 8192,
-                    "num_predict": 12288 if think == "on" else 4096},
-    }
-    if think != "default":
-        body["think"] = think == "on"
-    url = f"{OLLAMA_URL}/api/chat"
-    try:
-        r = post(url, body, {}, 900)
-    except urllib.error.HTTPError as e:
-        # Models without a thinking mode reject the `think` field; retry without it.
-        if "think" in body and "think" in e.read().decode(errors="replace").lower():
-            body.pop("think")
-            r = post(url, body, {}, 900)
-        else:
-            raise
-    msg = r.get("message", {})
-    answer, thinking = msg.get("content", ""), msg.get("thinking", "")
-    # Some models put their reasoning inline instead of in a separate field.
-    inline = re.findall(r"<think>(.*?)</think>", answer, re.S)
-    if inline:
-        thinking += "\n".join(inline)
-        answer = re.sub(r"<think>.*?</think>", "", answer, flags=re.S)
-    stats = {"prompt_tokens": r.get("prompt_eval_count", 0), "output_tokens": r.get("eval_count", 0),
-             "hit_token_limit": r.get("done_reason") == "length"}
-    return answer, thinking, stats
-
-
-def ask_openai(model, prompt, cfg):
-    """OpenAI Responses API. Returns (answer, thinking, stats). Raises RequestFailed."""
-    key = os.environ.get("OPENAI_API_KEY", "")
-    body = {"model": model, "instructions": SYSTEM, "input": prompt,
-            "max_output_tokens": cfg["max_output"]}
-    if cfg["effort"] != "default":
-        body["reasoning"] = {"effort": cfg["effort"]}
-    try:
-        r = post(f"{OPENAI_URL}/responses", body, {"Authorization": f"Bearer {key}"}, 600)
-    except urllib.error.HTTPError as e:
-        detail = e.read().decode(errors="replace")[:300]
-        raise RequestFailed(f"HTTP {e.code}: {detail}")
-    except Exception as e:
-        raise RequestFailed(f"{type(e).__name__}: {e}")
-    answer = "".join(c.get("text", "") for item in r.get("output", []) if item.get("type") == "message"
-                     for c in item.get("content", []) if c.get("type") == "output_text")
-    usage = r.get("usage")
-    if not usage:
-        raise RequestFailed("response had no usage information")
-    stats = {"prompt_tokens": usage.get("input_tokens", 0),
-             "output_tokens": usage.get("output_tokens", 0),
-             "reasoning_tokens": (usage.get("output_tokens_details") or {}).get("reasoning_tokens", 0),
-             "hit_token_limit": r.get("status") == "incomplete"
-             and (r.get("incomplete_details") or {}).get("reason") == "max_output_tokens"}
-    return answer, "", stats
-
-
-def worst_case_cost(prompt, cfg):
-    """Most a single request could cost: a generous prompt-token estimate
-    (2 characters per token; real text is ~4) plus a full-length answer."""
-    est_in = math.ceil(len(SYSTEM + prompt) / 2) + 100
-    return (est_in * cfg["price_in"] + cfg["max_output"] * cfg["price_out"]) / 1e6
-
-
-def actual_cost(stats, cfg):
-    return (stats["prompt_tokens"] * cfg["price_in"] + stats["output_tokens"] * cfg["price_out"]) / 1e6
 
 
 def extract(answer, top):
@@ -179,9 +104,14 @@ def extract(answer, top):
 
 def build_prompt(task_dir):
     meta = json.loads((task_dir / "meta.json").read_text())
-    prompt = PROMPT.format(spec=(task_dir / "spec.md").read_text().strip(),
+    task, rule, label = INSTRUCTIONS[meta.get("task_type", "bugfix")]
+    prompt = PROMPT.format(task=task, rule=rule, label=label, spec=(task_dir / "spec.md").read_text().strip(),
                            top=meta["top"], buggy=(task_dir / "buggy.v").read_text().rstrip())
     return meta, prompt
+
+
+def task_label(meta):
+    return meta.get("label") or meta["bug"]["type"]
 
 
 def run_task(task_dir, cfg):
@@ -190,13 +120,16 @@ def run_task(task_dir, cfg):
     t0 = time.time()
     try:
         if paid:
-            answer, thinking, stats = ask_openai(cfg["model"].split(":", 1)[1], prompt, cfg)
+            answer, thinking, stats = ask_openai(cfg["model"].split(":", 1)[1], SYSTEM, prompt,
+                                                 cfg["max_output"], cfg["effort"])
         else:
-            answer, thinking, stats = ask_ollama(cfg["model"], prompt, cfg)
+            on = cfg["think"] == "on"
+            answer, thinking, stats = ask_ollama(OLLAMA_URL, cfg["model"], SYSTEM, prompt, cfg["think"],
+                                                 16384 if on else 8192, 12288 if on else 4096)
     except Exception as e:
         row = {"task_id": task_dir.name, "status": "error", "reason": f"model request failed: {e}"}
         if paid:
-            row["cost"] = worst_case_cost(prompt, cfg)    # unknown usage: assume the worst
+            row["cost"] = worst(prompt, cfg)    # unknown usage: assume the worst
         return row
     seconds = round(time.time() - t0, 1)
 
@@ -205,12 +138,28 @@ def run_task(task_dir, cfg):
         g = {"status": "no_answer", "reason": "no code block defining the module", "passed": [], "failed": []}
     else:
         g = grade(task_dir, code)
-    row = {"task_id": task_dir.name, "seed": meta["seed"], "bug_type": meta["bug"]["type"],
+    row = {"task_id": task_dir.name, "seed": meta["seed"], "task_type": meta.get("task_type", "bugfix"),
+           "bug_type": task_label(meta),
            "status": g["status"], "reason": g["reason"], "failed_tests": g["failed"],
            "seconds": seconds, **stats, "code": code, "answer": answer, "thinking": thinking}
     if paid:
-        row["cost"] = actual_cost(stats, cfg)
+        row["cost"] = actual_cost(stats, cfg["price_in"], cfg["price_out"])
     return row
+
+
+def worst(prompt, cfg):
+    return worst_case_cost(SYSTEM, prompt, cfg["price_in"], cfg["price_out"], cfg["max_output"])
+
+
+def safe_run_task(task_dir, cfg):
+    """run_task, but never raises: a crash becomes an error row (charged at worst case if paid)."""
+    try:
+        return run_task(task_dir, cfg)
+    except Exception as e:
+        row = {"task_id": task_dir.name, "status": "error", "reason": f"crashed: {type(e).__name__}: {e}"}
+        if is_paid(cfg["model"]):
+            row["cost"] = worst(build_prompt(task_dir)[1], cfg)
+        return row
 
 
 def summarize(run_dir, rows, config, spent=None):
@@ -232,7 +181,7 @@ def summarize(run_dir, rows, config, spent=None):
     if spent is not None:
         lines.append(f"cost       ${spent:.4f} of ${config['budget']:.2f} budget "
                      f"(prices in/out per 1M: ${config['price_in']} / ${config['price_out']})")
-    for key, title in (("bug_type", "by bug type"), ("seed", "by seed")):
+    for key, title in (("task_type", "by task type"), ("bug_type", "by label"), ("seed", "by seed")):
         groups = defaultdict(list)
         for r in rows:
             groups[r.get(key, "?")].append(r["status"] == "pass")
@@ -255,7 +204,9 @@ def main():
     ap.add_argument("--budget", type=float, help="OpenAI: hard spending cap in USD for this run (all resumes)")
     ap.add_argument("--max-output", type=int, default=8000, help="OpenAI: max output tokens per answer")
     ap.add_argument("--yes", action="store_true", help="OpenAI: actually send requests (otherwise estimate only)")
+    ap.add_argument("--jobs", type=int, help="requests at once (default: 8 for OpenAI, 1 for local Ollama)")
     ap.add_argument("--limit", type=int, help="only the first N tasks (for quick checks)")
+    ap.add_argument("--task-types", help="comma-separated: bugfix,multibug,complete,module (default: all)")
     ap.add_argument("--tasks", default=str(ROOT / "tasks"))
     ap.add_argument("--results-dir", default=str(ROOT / "results"))
     ap.add_argument("--resume", help="continue an interrupted run directory")
@@ -274,7 +225,8 @@ def main():
         config = {"model": args.model, "think": args.think, "effort": args.effort,
                   "prompt_version": PROMPT_VERSION, "temperature": None if is_paid(args.model) else 0,
                   "started": datetime.now().isoformat(timespec="seconds"),
-                  "tasks": args.tasks, "limit": args.limit, "max_output": args.max_output,
+                  "tasks": args.tasks, "limit": args.limit, "task_types": args.task_types,
+                  "max_output": args.max_output,
                   "price_in": args.price_in, "price_out": args.price_out, "budget": args.budget}
         run_dir = None
 
@@ -289,7 +241,11 @@ def main():
         if args.yes and not os.environ.get("OPENAI_API_KEY"):
             ap.error("OPENAI_API_KEY is not set (in Docker, add: -e OPENAI_API_KEY)")
 
-    tasks = sorted(Path(config["tasks"]).glob("task_*"))[:config["limit"]]
+    tasks = sorted(Path(config["tasks"]).glob("t_*")) or sorted(Path(config["tasks"]).glob("task_*"))
+    if config.get("task_types"):
+        wanted = set(config["task_types"].split(","))
+        tasks = [t for t in tasks if json.loads((t / "meta.json").read_text()).get("task_type", "bugfix") in wanted]
+    tasks = tasks[:config["limit"]]
     rows_on_disk = []
     if run_dir and (run_dir / "results.jsonl").exists():
         rows_on_disk = [json.loads(l) for l in (run_dir / "results.jsonl").read_text().splitlines()]
@@ -298,14 +254,14 @@ def main():
     todo = [t for t in tasks if t.name not in done]
 
     if paid:
-        worst = sum(worst_case_cost(build_prompt(t)[1], config) for t in todo)
+        worst_total = sum(worst(build_prompt(t)[1], config) for t in todo)
         est_in = sum(len(SYSTEM + build_prompt(t)[1]) / 4 for t in todo)
         typical = (est_in * config["price_in"] + len(todo) * 2000 * config["price_out"]) / 1e6
         print(f"{config['model']} (effort {config['effort']}): {len(todo)} tasks to run")
         print(f"  likely cost   ~${typical:.2f}  (guess: 2,000 output tokens per task incl. reasoning)")
-        print(f"  worst case     ${worst:.2f}  (every answer uses all {config['max_output']} output tokens)")
+        print(f"  worst case     ${worst_total:.2f}  (every answer uses all {config['max_output']} output tokens)")
         print(f"  budget         ${config['budget']:.2f}, already spent ${spent:.4f}")
-        if worst + spent > config["budget"]:
+        if worst_total + spent > config["budget"]:
             print(f"  -> the run will stop early if spending gets close to the budget")
         if not args.yes:
             print("\nEstimate only: nothing was sent. Re-run with --yes to start.")
@@ -323,34 +279,37 @@ def main():
     else:
         (run_dir / "config.json").write_text(json.dumps(config, indent=2) + "\n")
 
-    print(f"{config['model']}: {len(todo)} to run, {len(done)} already done -> {run_dir}")
-    errors_in_a_row, stopped = 0, None
+    jobs = args.jobs or (8 if paid else 1)
+    print(f"{config['model']}: {len(todo)} to run, {len(done)} already done, {jobs} at a time -> {run_dir}",
+          flush=True)
+    budget = Budget(config["budget"], spent) if paid else None
+    finished = [0]
+
+    def reserve(task_dir):
+        if not paid:
+            return True, None
+        w = worst(build_prompt(task_dir)[1], config)
+        return (True, w) if budget.reserve(w) else (False, budget.why_not(w))
+
     with (run_dir / "results.jsonl").open("a") as out:
-        for k, task_dir in enumerate(todo, 1):
+        def on_done(task_dir, r, w):
             if paid:
-                worst = worst_case_cost(build_prompt(task_dir)[1], config)
-                if spent + worst > config["budget"]:
-                    stopped = (f"budget: spent ${spent:.4f}, next request could cost up to ${worst:.4f}, "
-                               f"budget ${config['budget']:.2f}")
-                    break
-            r = run_task(task_dir, config)
-            spent += r.get("cost", 0)
+                budget.settle(w, r.get("cost", 0))
             if r["status"] != "error":
                 done[r["task_id"]] = r
             out.write(json.dumps(r) + "\n")
             out.flush()
+            finished[0] += 1
             score = sum(x["status"] == "pass" for x in done.values())
-            cost = f"  ${spent:.4f} spent" if paid else ""
-            print(f"  [{k}/{len(todo)}] {r['task_id']} {r.get('bug_type', ''):<13} {r['status']:<13} "
-                  f"{r.get('seconds', '-')}s  | running total {score}/{len(done)}{cost}")
+            cost = f"  ${budget.spent:.4f} spent" if paid else ""
+            print(f"  [{finished[0]}/{len(todo)}] {r['task_id']} {r.get('bug_type', ''):<13} {r['status']:<13} "
+                  f"{r.get('seconds', '-')}s  | running total {score}/{len(done)}{cost}", flush=True)
             if r["status"] == "error":
-                print(f"      {r['reason'][:200]}")
-                errors_in_a_row += 1
-                if errors_in_a_row >= MAX_ERRORS_IN_A_ROW:
-                    stopped = f"{MAX_ERRORS_IN_A_ROW} errors in a row (see above); not retrying"
-                    break
-            else:
-                errors_in_a_row = 0
+                print(f"      {r['reason'][:200]}", flush=True)
+            return r["status"] == "error"
+
+        stopped = run_pool(todo, lambda t: safe_run_task(t, config), jobs, reserve, on_done, MAX_ERRORS_IN_A_ROW)
+    spent = budget.spent if paid else 0
 
     if stopped:
         print(f"\nSTOPPED: {stopped}. Resume later with --resume {run_dir}")
