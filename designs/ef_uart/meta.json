@@ -1,0 +1,10 @@
+{
+  "name": "ef_uart",
+  "description": "Efabless EF_UART with APB wrapper: UART TX/RX (5-9 data bits, parity, 1-2 stop bits), 16-deep FIFOs with thresholds, glitch filter, loopback, match/break/timeout detection, 10 interrupt sources",
+  "source": "https://github.com/efabless/EF_UART @ 793ec5a + https://github.com/efabless/EF_IP_UTIL @ a2b3fb6",
+  "license": "Apache-2.0 (Efabless Corp.; see LICENSE and NOTICE.md)",
+  "created": "2026-10-09",
+  "kind": "multi_module",
+  "top": "EF_UART_APB",
+  "build": {"presample_per_op": 25, "multi_k": [2, 3, 4], "multi_per_k": 10, "multi_cross_module": true, "holes_per_kind": 4}
+}

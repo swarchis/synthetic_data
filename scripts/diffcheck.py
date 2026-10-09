@@ -62,17 +62,18 @@ def wrapper(golden_src, top):
     decl, conn_dut, conn_ref = [], [], []
     for name, (direction, width) in ports.items():
         if direction == "input":
-            decl.append(f"  input {width} {name}")
+            decl.append(f"  input wire {width} {name}")
             conn_dut.append(f".{name}({name})")
             conn_ref.append(f".{name}({name})")
         elif direction == "output":
-            decl += [f"  output {width} dut_{name}", f"  output {width} ref_{name}"]
+            decl += [f"  output wire {width} dut_{name}", f"  output wire {width} ref_{name}"]
             conn_dut.append(f".{name}(dut_{name})")
             conn_ref.append(f".{name}(ref_{name})")
         else:
             raise ValueError(f"inout port {name} is not supported")
     pov = f" #({', '.join(f'.{k}({k})' for k in params)})" if params else ""
-    head = f"module diff_top #({plist}) (\n" if params else "module diff_top (\n"
+    # Seeds may leave `default_nettype none active; the wrapper declares every net anyway.
+    head = "`default_nettype wire\n" + (f"module diff_top #({plist}) (\n" if params else "module diff_top (\n")
     return (head + ",\n".join(decl) + "\n);\n"
             f"  {top}{pov} u_dut ({', '.join(conn_dut)});\n"
             f"  {top}__ref{pov} u_ref ({', '.join(conn_ref)});\n"

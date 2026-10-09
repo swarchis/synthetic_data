@@ -123,7 +123,7 @@ def grade(task_dir, candidate):
     with tempfile.NamedTemporaryFile("w", suffix=".v") as f:
         f.write(candidate)
         f.flush()
-        r = run_tests(f.name, task_dir / "tests", timeout=30)
+        r = run_tests(f.name, task_dir / "tests", timeout=30, golden=task_dir / "golden.v")
     reason = ""
     if r["status"] == "compile_error":
         # Keep the compiler's own messages, not make's noise, with the temp path hidden.
@@ -132,6 +132,9 @@ def grade(task_dir, candidate):
         reason = "\n".join(lines[:10]) or r["log"][-800:]
     elif r["status"] == "timeout":
         reason = "simulation did not finish in 30s (likely an infinite loop)"
+    elif r["status"] == "fail" and any(t.startswith("diff:") for t in r["failed"]):
+        from diffcheck import first_mismatch
+        reason = first_mismatch(r["log"])
     return {"status": r["status"], "reason": reason, "passed": r["passed"], "failed": r["failed"]}
 
 

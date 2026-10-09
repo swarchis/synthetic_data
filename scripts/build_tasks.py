@@ -53,12 +53,13 @@ def load_seed(seed_dir):
     return meta, design
 
 
-def test_source(source, seed_dir):
-    """Run the seed's tests on Verilog text."""
+def test_source(source, seed_dir, golden_path=None):
+    """Run the seed's checks on Verilog text: its own tests, plus the differential
+    check against the golden design when the seed has a diff.json."""
     with tempfile.NamedTemporaryFile("w", suffix=".v", delete=False) as f:
         f.write(source)
     try:
-        return run_tests(f.name, seed_dir, timeout=30)
+        return run_tests(f.name, seed_dir, timeout=30, golden=golden_path)
     finally:
         os.unlink(f.name)
 
@@ -114,14 +115,14 @@ def build_seed(seed_dir, args):
     row = Counter(seed=seed)
     golden = design.read_text()
 
-    r = run_tests(design, seed_dir)
+    r = run_tests(design, seed_dir, golden=design)
     if r["status"] != "pass":
         print(f"  SKIP {seed}: golden design {r['status']} {r['failed']}")
         return row, [], []
 
     def run_all(sources):
         with ThreadPoolExecutor(args.jobs) as pool:
-            return list(pool.map(lambda s: test_source(s, seed_dir), sources))
+            return list(pool.map(lambda s: test_source(s, seed_dir, design), sources))
 
     # Single bugs.
     mutants, row["duplicates"] = mutate(golden)
@@ -207,11 +208,13 @@ def write_task(t):
     (task_dir / "golden.v").write_text(t["golden"])
     tests = task_dir / "tests"
     tests.mkdir()
-    shutil.copy(seed_dir / "Makefile", tests)
+    if (seed_dir / "Makefile").exists():                # hand-written tests, if the seed has them
+        shutil.copy(seed_dir / "Makefile", tests)
     for f in seed_dir.glob("test_*.py"):
         shutil.copy(f, tests)
-    if (seed_dir / "configs.json").exists():            # parameter sweep for sim.py
-        shutil.copy(seed_dir / "configs.json", tests)
+    for extra in ("configs.json", "diff.json"):           # parameter sweep; differential check
+        if (seed_dir / extra).exists():
+            shutil.copy(seed_dir / extra, tests)
     info = {"task_id": t["task_id"], "task_type": t["task_type"], "label": t["label"],
             "seed": seed_dir.name, "top": meta["top"]}
     for key in ("bug", "bugs", "hole"):

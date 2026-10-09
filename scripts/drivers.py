@@ -65,31 +65,67 @@ class ApbDriver:
         self.p_misaligned = rule.get("p_misaligned", 0.05)
         self.p_write = rule.get("p_write", 0.5)
         self.data_values = rule.get("data_values", [])     # extra interesting write data
+        # Per-register write data, e.g. {"4": [5, 20, 100]}: keeps values in a useful range.
+        self.data_by_addr = {int(k, 0): v for k, v in rule.get("data_by_addr", {}).items()}
+        # Writes issued after every reset, before random traffic: [[addr, data], ...]
+        self.init_writes = rule.get("init_writes", [])
+        self.p_alias = rule.get("p_alias", 0.0)              # set random upper address bits
+        self.alias_bits = rule.get("alias_bits", [16, 32])   # ...in this bit range [lo, hi)
+        self.p_random_addr = rule.get("p_random_addr", 0.0)  # fully random address in the low range
+        self.random_addr_bits = rule.get("random_addr_bits", 16)
+        self.p_near_addr = rule.get("p_near_addr", 0.0)      # valid address with one decoded bit flipped
+        # Optional traffic phases: [{"transfers": N, "weights": [...]}, ...], repeated in order.
+        # Lets a device reach states that steady traffic never does (e.g. a FIFO filling up).
+        self.weight_phases = rule.get("phases", [])
+        self.transfers = 0
+        self.pending_init = list(self.init_writes)
         self.names = {k: rule.get(k, k) for k in ("PSEL", "PENABLE", "PWRITE", "PADDR", "PWDATA")}
         self.phase = "idle"
         self.cur = None
 
     def _new_transfer(self):
-        a = self.rng.choices(self.addrs, weights=self.weights)[0]
-        if self.rng.random() < self.p_misaligned:
-            a += self.rng.randrange(1, 4)
+        if self.pending_init:
+            a, data = self.pending_init.pop(0)
+            return {"PWRITE": 1, "PADDR": a & 0xFFFFFFFF, "PWDATA": data & 0xFFFFFFFF}
+        weights = self.weights
+        if self.weight_phases:
+            t = self.transfers % sum(ph["transfers"] for ph in self.weight_phases)
+            for ph in self.weight_phases:
+                if t < ph["transfers"]:
+                    weights = ph["weights"]
+                    break
+                t -= ph["transfers"]
+        self.transfers += 1
+        a = self.rng.choices(self.addrs, weights=weights)[0]
         write = int(self.rng.random() < self.p_write)
-        if self.data_values and self.rng.random() < 0.5:
+        if a in self.data_by_addr and self.rng.random() < 0.85:
+            data = self.rng.choice(self.data_by_addr[a])
+        elif self.data_values and self.rng.random() < 0.5:
             data = self.rng.choice(self.data_values)
         else:
             data = self.rng.getrandbits(32)
-        return {"PWRITE": write, "PADDR": a & 0xFF, "PWDATA": data & 0xFFFFFFFF}
+        if self.rng.random() < self.p_misaligned:
+            a += self.rng.randrange(1, 4)
+        if self.rng.random() < self.p_random_addr:
+            a = self.rng.getrandbits(self.random_addr_bits)
+        elif self.rng.random() < self.p_near_addr:            # near-miss: catches decoders using too few bits
+            a ^= 1 << self.rng.randrange(2, self.random_addr_bits)
+        if self.rng.random() < self.p_alias:
+            lo, hi = self.alias_bits
+            a |= self.rng.getrandbits(hi - lo) << lo
+        return {"PWRITE": write, "PADDR": a & 0xFFFFFFFF, "PWDATA": data & 0xFFFFFFFF}
 
     def step(self):
         n = self.names
         if self.phase == "setup":
             self.phase = "access"
             return {n["PSEL"]: 1, n["PENABLE"]: 1, **{n[k]: v for k, v in self.cur.items()}}
-        if self.rng.random() < self.p_idle:
+        if self.rng.random() < self.p_idle and not self.pending_init:
             self.phase = "idle"
             # Bus junk while not selected, including PENABLE: a slave must ignore it without PSEL.
             junk = {"PENABLE": self.rng.randrange(2), "PWRITE": self.rng.randrange(2),
-                    "PADDR": self.rng.randrange(256), "PWDATA": self.rng.getrandbits(32)}
+                    "PADDR": self.rng.choice(self.addrs) if self.rng.random() < 0.5 else self.rng.randrange(256),
+                    "PWDATA": self.rng.getrandbits(32)}
             return {n["PSEL"]: 0, **{n[k]: v for k, v in junk.items()}}
         self.cur = self._new_transfer()
         self.phase = "setup"
@@ -97,6 +133,7 @@ class ApbDriver:
 
     def reset(self):
         self.phase = "idle"
+        self.pending_init = list(self.init_writes)
 
     @property
     def signals(self):

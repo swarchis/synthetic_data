@@ -47,7 +47,48 @@ LOGIC_SWAPS = {"&&": ["||"], "||": ["&&"], "&": ["|"], "|": ["&"]}
 ARITH_SWAPS = {"+": ["-"], "-": ["+"]}
 
 
+def blank_inactive(src):
+    """Replace code in inactive `ifdef/`ifndef/`elsif/`else branches with spaces
+    (newlines kept, so every character keeps its position). Macros count as defined
+    only if this file `define's them. Code the compiler would skip is never mutated
+    or graded."""
+    defined, stack, out = set(), [], []          # stack entries: [this_branch_active, any_branch_taken]
+    active = lambda: all(a for a, _ in stack)
+    blank = lambda text: "".join(c if c == "\n" else " " for c in text)
+    in_define = False                            # inside a multi-line `define body
+    for line in src.splitlines(keepends=True):
+        if in_define:                            # macro bodies are not code until used
+            in_define = line.rstrip("\n").rstrip().endswith("\\")
+            out.append(blank(line))
+            continue
+        d = re.match(r"\s*`(ifdef|ifndef|elsif|else|endif|define)\b\s*(\w*)", line)
+        kind, name = (d.group(1), d.group(2)) if d else (None, None)
+        if kind in ("ifdef", "ifndef"):
+            on = (name in defined) == (kind == "ifdef")
+            stack.append([on, on])
+        elif kind == "elsif" and stack:
+            on = not stack[-1][1] and name in defined
+            stack[-1] = [on, stack[-1][1] or on]
+        elif kind == "else" and stack:
+            stack[-1] = [not stack[-1][1], True]
+        elif kind == "endif" and stack:
+            stack.pop()
+        elif kind == "define" and active():
+            defined.add(name)
+        if kind == "define":                     # keep `define NAME, blank the body
+            keep = d.end(2)
+            out.append(line[:keep] + blank(line[keep:]))
+            in_define = line.rstrip("\n").rstrip().endswith("\\")
+        elif kind or active():
+            out.append(line)
+        else:
+            out.append(blank(line))
+    return "".join(out)
+
+
 def tokenize(src):
+    if "`if" in src or "`define" in src:
+        src = blank_inactive(src)
     toks, pos = [], 0
     while pos < len(src):
         m = TOKEN_RE.match(src, pos)

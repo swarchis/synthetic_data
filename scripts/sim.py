@@ -29,7 +29,7 @@ from pathlib import Path
 DEFAULT_TIMEOUT = 60  # seconds, per config
 
 
-def run_tests(design, test_dir, timeout=DEFAULT_TIMEOUT):
+def run_tests(design, test_dir, timeout=DEFAULT_TIMEOUT, golden=None):
     """Returns {"status", "passed", "failed", "log"}.
 
     status is one of:
@@ -37,9 +37,31 @@ def run_tests(design, test_dir, timeout=DEFAULT_TIMEOUT):
       fail           at least one test failed
       compile_error  the simulator could not build the design
       timeout        simulation ran longer than `timeout` seconds
+
+    If `golden` (a path to the golden design) is given and <test_dir> has a
+    diff.json, the design must also match the golden design in the
+    differential check (diffcheck.py). A <test_dir> with only diff.json and no
+    Makefile is checked by the differential check alone.
     """
     design = Path(design).resolve()
     test_dir = Path(test_dir).resolve()
+    has_tests = (test_dir / "Makefile").exists()
+    use_diff = golden is not None and (test_dir / "diff.json").exists()
+    if not has_tests and not use_diff:
+        raise FileNotFoundError(f"{test_dir}: no Makefile, and no diff.json with a golden design")
+
+    r = run_hand_tests(design, test_dir, timeout) if has_tests else result("pass", [], [], "")
+    if r["status"] != "pass" or not use_diff:
+        return r
+    from diffcheck import diff_check          # imported here: diffcheck imports this module
+    d = diff_check(design.read_text(), Path(golden).read_text(), test_dir, timeout)
+    log = (r["log"] + "\n" + d["log"]).strip()
+    return result(d["status"], r["passed"] + [f"diff:{t}" for t in d["passed"]],
+                  [f"diff:{t}" for t in d["failed"]], log)
+
+
+def run_hand_tests(design, test_dir, timeout):
+    """The seed's own cocotb tests, once per parameter config."""
 
     # Fresh folder per run, so parallel runs never share build files.
     work = Path(tempfile.mkdtemp(prefix="sim_"))
