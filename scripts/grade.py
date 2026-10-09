@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from inject import bracket_pairs, is_signal_name, tokenize
+from inject import bracket_pairs, is_signal_name, module_spans, tokenize
 from sim import run_tests
 
 # Could end the simulation early, read outside files, or touch the host.
@@ -30,7 +30,17 @@ def norm(s):
 
 
 def interface(src):
-    """Return (module names, {port: (direction, width)}, {parameter: default})."""
+    """Return {module name: ({port: (direction, width)}, {parameter: default})}."""
+    out = {}
+    for s, e in module_spans(src) or [(0, len(src))]:
+        mods, ports, params = module_interface(src[s:e])
+        if mods:
+            out[mods[0]] = (ports, params)
+    return out
+
+
+def module_interface(src):
+    """For one module: (module names, {port: (direction, width)}, {parameter: default})."""
     toks = tokenize(src)
     pairs = bracket_pairs(toks)
     text = lambda i, j: src[toks[i].start:toks[j].end]
@@ -81,22 +91,23 @@ def check(golden, candidate):
         return "empty file"
     try:
         toks = tokenize(candidate)
-        cand_mods, cand_ports, cand_params = interface(candidate)
+        cand = interface(candidate)
     except (ValueError, IndexError, KeyError) as e:
         return f"could not parse: {e}"
-    gold_mods, gold_ports, gold_params = interface(golden)
+    gold = interface(golden)
 
     banned = sorted({t.text for t in toks if t.text in BANNED})
     if banned:
         return f"banned construct: {', '.join(banned)}"
-    if cand_mods != gold_mods:
-        return f"modules {cand_mods}, expected {gold_mods}"
-    if cand_ports != gold_ports:
-        diff = sorted(set(cand_ports.items()) ^ set(gold_ports.items()))
-        return f"ports changed: {diff}"
-    if cand_params != gold_params:
-        diff = sorted(set(cand_params.items()) ^ set(gold_params.items()))
-        return f"parameters changed: {diff}"
+    if sorted(cand) != sorted(gold):
+        return f"modules {sorted(cand)}, expected {sorted(gold)}"
+    for name in sorted(gold):
+        (cp, cpar), (gp, gpar) = cand[name], gold[name]
+        where = f" in {name}" if len(gold) > 1 else ""
+        if cp != gp:
+            return f"ports changed{where}: {sorted(set(cp.items()) ^ set(gp.items()))}"
+        if cpar != gpar:
+            return f"parameters changed{where}: {sorted(set(cpar.items()) ^ set(gpar.items()))}"
     return None
 
 

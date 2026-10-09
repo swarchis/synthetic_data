@@ -45,7 +45,7 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from grade import grade
+from grade import grade, interface
 from llm import Budget, actual_cost, ask_ollama, ask_openai, is_paid, run_pool, worst_case_cost
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -90,10 +90,24 @@ Rules:
 """
 
 
-def extract(answer, top):
+def extract(answer, top, modules=None):
     """Pull the corrected module out of the reply. Models often add extra code
-    blocks (e.g. a testbench), so take the last block that defines `module <top>`."""
+    blocks (e.g. a testbench), so take the last block that defines `module <top>`.
+    For multi-module designs, a reply may split modules across blocks: then join
+    the last block defining each expected module."""
     blocks = re.findall(r"```[a-zA-Z]*\s*\n(.*?)```", answer, re.S)
+    if modules and len(modules) > 1:
+        chosen = {}
+        for b in blocks:
+            for m in re.findall(r"\bmodule\s+(\w+)", b):
+                if m in modules:
+                    chosen[m] = b
+        if top in chosen and len(set(chosen.values())) > 1:
+            ordered = []
+            for m in modules:
+                if m in chosen and chosen[m] not in ordered:
+                    ordered.append(chosen[m])
+            return "\n".join(ordered)
     has_top = re.compile(rf"\bmodule\s+{re.escape(top)}\b")
     matches = [b for b in blocks if has_top.search(b)]
     if matches:
@@ -133,7 +147,7 @@ def run_task(task_dir, cfg):
         return row
     seconds = round(time.time() - t0, 1)
 
-    code = extract(answer, meta["top"])
+    code = extract(answer, meta["top"], list(interface((task_dir / "golden.v").read_text())))
     if code is None:
         g = {"status": "no_answer", "reason": "no code block defining the module", "passed": [], "failed": []}
     else:
@@ -207,6 +221,7 @@ def main():
     ap.add_argument("--jobs", type=int, help="requests at once (default: 8 for OpenAI, 1 for local Ollama)")
     ap.add_argument("--limit", type=int, help="only the first N tasks (for quick checks)")
     ap.add_argument("--task-types", help="comma-separated: bugfix,multibug,complete,module (default: all)")
+    ap.add_argument("--seeds", help="comma-separated seed names, e.g. apb_intc (default: all)")
     ap.add_argument("--tasks", default=str(ROOT / "tasks"))
     ap.add_argument("--results-dir", default=str(ROOT / "results"))
     ap.add_argument("--resume", help="continue an interrupted run directory")
@@ -225,7 +240,7 @@ def main():
         config = {"model": args.model, "think": args.think, "effort": args.effort,
                   "prompt_version": PROMPT_VERSION, "temperature": None if is_paid(args.model) else 0,
                   "started": datetime.now().isoformat(timespec="seconds"),
-                  "tasks": args.tasks, "limit": args.limit, "task_types": args.task_types,
+                  "tasks": args.tasks, "limit": args.limit, "task_types": args.task_types, "seeds": args.seeds,
                   "max_output": args.max_output,
                   "price_in": args.price_in, "price_out": args.price_out, "budget": args.budget}
         run_dir = None
@@ -245,6 +260,9 @@ def main():
     if config.get("task_types"):
         wanted = set(config["task_types"].split(","))
         tasks = [t for t in tasks if json.loads((t / "meta.json").read_text()).get("task_type", "bugfix") in wanted]
+    if config.get("seeds"):
+        wanted = set(config["seeds"].split(","))
+        tasks = [t for t in tasks if json.loads((t / "meta.json").read_text())["seed"] in wanted]
     tasks = tasks[:config["limit"]]
     rows_on_disk = []
     if run_dir and (run_dir / "results.jsonl").exists():

@@ -1,0 +1,10 @@
+{
+  "name": "apb_intc",
+  "description": "APB3 interrupt controller: 5 modules, input synchronizer, level/edge triggers, priorities with threshold, claim/complete, W1C pending, error responses",
+  "source": "original, written in-house",
+  "license": "owned by rtl-env founders",
+  "created": "2026-10-09",
+  "kind": "multi_module",
+  "top": "apb_intc",
+  "build": {"presample_per_op": 25}
+}

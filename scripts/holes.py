@@ -8,6 +8,8 @@ Kinds of hole, smallest to largest:
   case_item     the body of one `case` branch (the label stays)
   always        a whole `always` block
   module        everything between the module header and `endmodule`
+                (multi-module files: every module body, headers kept)
+  submodule     multi-module files only: one module's whole body
 
 Declarations and ports are never removed, except in `module` holes, where
 only the header is kept. No randomness: the same input gives the same holes.
@@ -18,7 +20,7 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from inject import Design, lineno
+from inject import Design, is_signal_name, lineno, module_spans
 
 MARK = "// TODO: missing logic"
 MODULE_MARK = "// TODO: implement the module"
@@ -50,7 +52,11 @@ class Holes:
         toks, depth, starts = self.d.toks, 0, []
         for i in range(self.hdr_end + 1, len(toks)):
             x = toks[i].text
-            if depth == 0 and x in ITEM_KW and toks[i - 1].text in (";", "end", "endcase", "endgenerate"):
+            at_item = toks[i - 1].text in (";", "end", "endcase", "endgenerate")
+            # An instance (`sub_mod #(...) u_sub (...)` or `sub_mod u_sub (...)`) is an item too.
+            instance = (is_signal_name(toks[i]) and i + 1 < len(toks)
+                        and (toks[i + 1].text == "#" or is_signal_name(toks[i + 1])))
+            if depth == 0 and at_item and (x in ITEM_KW or instance):
                 starts.append(i)
             depth += (x in OPENS) - (x in CLOSES)
         return [(toks[a].text, a, b - 1) for a, b in zip(starts, starts[1:])]
@@ -155,7 +161,35 @@ def label_colon(line):
 
 
 def holes(src):
-    return Holes(src).all()
+    """All holes in the file. Single-module files: as before. Multi-module files:
+    holes inside each module, `submodule` (one module's whole body), and
+    `module` (every module body removed, headers kept)."""
+    spans = module_spans(src)
+    if len(spans) <= 1:
+        return Holes(src).all()
+    out, bodies = [], {}
+    for s, e in spans:
+        offset = src[:s].count("\n")
+        for h in Holes(src[s:e]).all():
+            h = dict(h, line=h["line"] + offset, end_line=h["end_line"] + offset,
+                     source=src[:s] + h["source"] + src[e:])
+            if h["kind"] == "module":
+                bodies[(s, e)] = h
+                h = dict(h, kind="submodule")
+            out.append(h)
+    whole = src
+    for (s, e) in sorted(bodies, reverse=True):          # back to front keeps offsets valid
+        sub = Holes(src[s:e]).all()
+        body = next(h for h in sub if h["kind"] == "module")["source"]
+        whole = whole[:s] + body + whole[e:]
+    out.append({"kind": "module", "line": 1, "end_line": src.count("\n"),
+                "removed": "(all module bodies)", "source": whole})
+    seen, unique = {src}, []
+    for h in out:
+        if h["source"] not in seen:
+            seen.add(h["source"])
+            unique.append(h)
+    return unique
 
 
 if __name__ == "__main__":

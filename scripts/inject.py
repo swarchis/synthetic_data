@@ -86,6 +86,8 @@ class Design:
         self.states = {}       # localparam name -> bit size, for `localparam S_IDLE = 2'd0;`
         self.mutable = [True] * len(self.toks)
         self._scan()
+        # Clocks passed down to submodules never appear in an @(...) here; catch them by name.
+        self.clocks |= {n for n in self.signals if re.search(r"(^|_)(p?clk|clock)$", n, re.I)}
         self._find_assignments()
 
     def text(self, i, j):
@@ -139,6 +141,9 @@ class Design:
             elif t == "endmodule":
                 self._freeze(i, i)
                 i += 1
+            elif t == "." and i + 1 < len(toks):
+                self._freeze(i, i + 1)         # `.port(sig)`: the port name is not ours to change
+                i += 2
             else:
                 i += 1
 
@@ -313,11 +318,33 @@ def mutate_number(text):
     return out
 
 
+def module_spans(src):
+    """Character spans of each module..endmodule, each starting at the beginning of
+    its `module` line, so every module can be analyzed on its own."""
+    spans, start = [], None
+    for t in tokenize(src):
+        if t.text == "module" and start is None:
+            start = src.rfind("\n", 0, t.start) + 1
+        elif t.text == "endmodule" and start is not None:
+            spans.append((start, t.end))
+            start = None
+    return spans
+
+
 def mutate(src):
-    """Return a list of mutants, each a dict with op, line, before, after, source."""
+    """Return a list of mutants, each a dict with op, line, before, after, source.
+    Each module is analyzed separately, so signal names never cross modules."""
+    edits = []
+    for s, e in module_spans(src) or [(0, len(src))]:
+        edits += [(op, a + s, b + s, new) for op, a, b, new in _module_edits(src[s:e])]
+    return _build_mutants(src, edits)
+
+
+def _module_edits(src):
+    """All single-bug edits for one module: (op, start, end, replacement)."""
     d = Design(src)
     toks = d.toks
-    edits = []   # (op, start, end, replacement)
+    edits = []
 
     def swap(op, t, options):
         for new in options:
@@ -372,6 +399,10 @@ def mutate(src):
             if src[line_start:toks[s].start].strip() == "" and src[toks[e].end:line_end].strip() == "":
                 edits.append(("delete_stmt", line_start, line_end, ""))
 
+    return edits
+
+
+def _build_mutants(src, edits):
     mutants, seen = [], {src}
     dupes = 0
     for op, start, end, new in edits:

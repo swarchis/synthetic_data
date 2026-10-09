@@ -1,0 +1,33 @@
+{
+  "top": "apb_intc",
+  "configs": [
+    {
+      "name": "n4p2",
+      "params": {
+        "NUM_SRC": 4,
+        "PRIO_BITS": 2
+      }
+    },
+    {
+      "name": "n8p3",
+      "params": {
+        "NUM_SRC": 8,
+        "PRIO_BITS": 3
+      }
+    },
+    {
+      "name": "n16p3",
+      "params": {
+        "NUM_SRC": 16,
+        "PRIO_BITS": 3
+      }
+    },
+    {
+      "name": "n12p4",
+      "params": {
+        "NUM_SRC": 12,
+        "PRIO_BITS": 4
+      }
+    }
+  ]
+}

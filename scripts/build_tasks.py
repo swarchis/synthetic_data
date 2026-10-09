@@ -118,6 +118,14 @@ def build_seed(seed_dir, args):
 
     # Single bugs.
     mutants, row["duplicates"] = mutate(golden)
+    # Big designs make hundreds of candidates, each run at several parameter
+    # settings; a seed can ask to sample at most N per bug type before simulating.
+    presample = meta.get("build", {}).get("presample_per_op")
+    if presample:
+        by_op = defaultdict(list)
+        for m in mutants:
+            by_op[m["op"]].append(m)
+        mutants = [m for op in sorted(by_op) for m in spread(by_op[op], presample)]
     row["generated"] = len(mutants)
     caught, survivors = defaultdict(list), []
     for m, r in zip(mutants, run_all([m["source"] for m in mutants])):
@@ -187,6 +195,8 @@ def write_task(t):
     shutil.copy(seed_dir / "Makefile", tests)
     for f in seed_dir.glob("test_*.py"):
         shutil.copy(f, tests)
+    if (seed_dir / "configs.json").exists():            # parameter sweep for sim.py
+        shutil.copy(seed_dir / "configs.json", tests)
     info = {"task_id": t["task_id"], "task_type": t["task_type"], "label": t["label"],
             "seed": seed_dir.name, "top": meta["top"]}
     for key in ("bug", "bugs", "hole"):
