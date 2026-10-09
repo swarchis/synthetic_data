@@ -50,7 +50,7 @@ def main():
     if out.exists():
         done = {json.loads(l)["id"] for l in out.read_text().splitlines() if l.strip()}
     todo = [p for p in prompts if p["id"] not in done]
-    print(f"{args.model}: {len(todo)} to answer, {len(done)} already done -> {out}")
+    print(f"{args.model}: {len(todo)} to answer, {len(done)} already done -> {out}", flush=True)
 
     with out.open("a") as f:
         for k, p in enumerate(todo, 1):
@@ -63,7 +63,7 @@ def main():
             f.flush()
             cut = "  (CUT OFF at token limit)" if row["hit_token_limit"] else ""
             print(f"  [{k}/{len(todo)}] {p['id']:<45} {row['seconds']:>6}s  "
-                  f"{row['prompt_tokens']} in / {row['output_tokens']} out{cut}")
+                  f"{row['prompt_tokens']} in / {row['output_tokens']} out{cut}", flush=True)
 
 
 if __name__ == "__main__":
