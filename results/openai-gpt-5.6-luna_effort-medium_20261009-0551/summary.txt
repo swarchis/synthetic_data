@@ -1,0 +1,35 @@
+model      openai:gpt-5.6-luna  (effort: medium, prompt v2)
+started    2026-10-09T05:51:18
+pass@1     120/130 = 92.3%
+
+outcomes   pass 120, fail 8, rejected 1, compile_error 1
+time       52.8 min total, 24s per task, 3347 output tokens per task
+cost       $3.2598 of $4.00 budget (prices in/out per 1M: $1.0 / $6.0)
+
+by task type
+  bugfix         88/90
+  complete       19/19
+  module         0/1
+  multibug       13/20
+
+by label
+  arith_flip     10/10
+  compare_flip   10/10
+  const_change   10/10
+  delete_stmt    10/10
+  drop_not       10/10
+  hole_always    4/4
+  hole_assign    4/4
+  hole_assign_group 3/3
+  hole_case_item 4/4
+  hole_module    0/1
+  hole_submodule 4/4
+  invert_if      9/10
+  logic_flip     10/10
+  multi2         6/10
+  multi3         7/10
+  signal_swap    10/10
+  state_swap     9/10
+
+by seed
+  apb_intc       120/130
