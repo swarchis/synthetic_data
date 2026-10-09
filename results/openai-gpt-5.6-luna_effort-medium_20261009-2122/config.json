@@ -1,0 +1,16 @@
+{
+  "model": "openai:gpt-5.6-luna",
+  "think": "off",
+  "effort": "medium",
+  "prompt_version": "v2",
+  "temperature": null,
+  "started": "2026-10-09T21:22:58",
+  "tasks": "/work/tasks",
+  "limit": null,
+  "task_types": "multibug,complete,module",
+  "seeds": "ef_tmr32,ef_uart",
+  "max_output": 24000,
+  "price_in": 1.0,
+  "price_out": 6.0,
+  "budget": 10.0
+}

@@ -5,3 +5,5 @@ __pycache__/
 .DS_Store
 tasks/
 .server_logs/
+.env
+*.env

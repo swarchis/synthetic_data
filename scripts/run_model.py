@@ -216,7 +216,8 @@ def main():
     ap.add_argument("--price-in", type=float, help="OpenAI: USD per 1M input tokens (from OpenAI's pricing page)")
     ap.add_argument("--price-out", type=float, help="OpenAI: USD per 1M output tokens (from OpenAI's pricing page)")
     ap.add_argument("--budget", type=float, help="OpenAI: hard spending cap in USD for this run (all resumes)")
-    ap.add_argument("--max-output", type=int, default=8000, help="OpenAI: max output tokens per answer")
+    ap.add_argument("--max-output", type=int, help="OpenAI: max output tokens per answer (default 8000; "
+                                                    "can be raised when resuming)")
     ap.add_argument("--yes", action="store_true", help="OpenAI: actually send requests (otherwise estimate only)")
     ap.add_argument("--jobs", type=int, help="requests at once (default: 8 for OpenAI, 1 for local Ollama)")
     ap.add_argument("--limit", type=int, help="only the first N tasks (for quick checks)")
@@ -234,6 +235,8 @@ def main():
         config.setdefault("max_output", 8000)
         if args.budget is not None:            # allow raising (or lowering) the cap on resume
             config["budget"] = args.budget
+        if args.max_output is not None:        # e.g. retry answers that hit the token cap
+            config["max_output"] = args.max_output
     else:
         if not args.model:
             ap.error("--model is required")
@@ -241,7 +244,7 @@ def main():
                   "prompt_version": PROMPT_VERSION, "temperature": None if is_paid(args.model) else 0,
                   "started": datetime.now().isoformat(timespec="seconds"),
                   "tasks": args.tasks, "limit": args.limit, "task_types": args.task_types, "seeds": args.seeds,
-                  "max_output": args.max_output,
+                  "max_output": args.max_output or 8000,
                   "price_in": args.price_in, "price_out": args.price_out, "budget": args.budget}
         run_dir = None
 
