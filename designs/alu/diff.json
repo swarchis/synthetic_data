@@ -1,0 +1,41 @@
+{
+  "top": "alu",
+  "rules": {},
+  "phases": [
+    {
+      "cycles": 300,
+      "inputs": {}
+    },
+    {
+      "cycles": 200,
+      "inputs": {
+        "a": {
+          "kind": "values",
+          "values": [
+            0,
+            1,
+            2,
+            127,
+            128,
+            254,
+            255
+          ]
+        },
+        "b": {
+          "kind": "values",
+          "values": [
+            0,
+            1,
+            2,
+            127,
+            128,
+            254,
+            255
+          ]
+        }
+      }
+    }
+  ],
+  "cycles": 3000,
+  "runs": 2
+}

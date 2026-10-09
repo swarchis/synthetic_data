@@ -1,0 +1,34 @@
+{
+  "top": "uart_tx",
+  "clock": {
+    "name": "clk"
+  },
+  "reset": {
+    "name": "rst",
+    "active": 1,
+    "cycles": 2,
+    "random_rate": 0.001
+  },
+  "rules": {
+    "start": {
+      "kind": "random",
+      "p1": 0.05
+    }
+  },
+  "phases": [
+    {
+      "cycles": 600,
+      "inputs": {}
+    },
+    {
+      "cycles": 300,
+      "inputs": {
+        "start": {
+          "p1": 0.9
+        }
+      }
+    }
+  ],
+  "cycles": 4000,
+  "runs": 3
+}

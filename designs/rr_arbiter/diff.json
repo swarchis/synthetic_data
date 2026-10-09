@@ -1,0 +1,57 @@
+{
+  "top": "rr_arbiter",
+  "clock": {
+    "name": "clk"
+  },
+  "reset": {
+    "name": "rst",
+    "active": 1,
+    "cycles": 2,
+    "random_rate": 0.005
+  },
+  "phases": [
+    {
+      "cycles": 50,
+      "inputs": {}
+    },
+    {
+      "cycles": 50,
+      "inputs": {
+        "req": {
+          "p1": 0.25
+        }
+      }
+    },
+    {
+      "cycles": 20,
+      "inputs": {
+        "req": {
+          "kind": "values",
+          "values": [
+            15
+          ]
+        }
+      }
+    },
+    {
+      "cycles": 30,
+      "inputs": {
+        "req": {
+          "kind": "values",
+          "values": [
+            1,
+            2,
+            4,
+            8,
+            9,
+            10,
+            12,
+            0
+          ]
+        }
+      }
+    }
+  ],
+  "cycles": 2000,
+  "runs": 3
+}

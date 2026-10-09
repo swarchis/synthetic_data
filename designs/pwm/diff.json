@@ -1,0 +1,51 @@
+{
+  "top": "pwm",
+  "clock": {
+    "name": "clk"
+  },
+  "reset": {
+    "name": "rst",
+    "active": 1,
+    "cycles": 2,
+    "random_rate": 0.002
+  },
+  "rules": {
+    "en": {
+      "kind": "random",
+      "p1": 0.97
+    },
+    "period": {
+      "kind": "steady",
+      "p_change": 0.01,
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        7,
+        12,
+        30,
+        255
+      ]
+    },
+    "duty": {
+      "kind": "steady",
+      "p_change": 0.03,
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        5,
+        8,
+        13,
+        40,
+        200,
+        255
+      ]
+    }
+  },
+  "cycles": 4000,
+  "runs": 3
+}

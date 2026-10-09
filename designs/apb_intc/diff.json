@@ -1,0 +1,71 @@
+{
+  "top": "apb_intc",
+  "clock": {
+    "name": "PCLK"
+  },
+  "reset": {
+    "name": "PRESETn",
+    "active": 0,
+    "cycles": 2,
+    "random_rate": 0.002
+  },
+  "apb": {
+    "addresses": [
+      0,
+      4,
+      8,
+      12,
+      16,
+      20,
+      24,
+      28,
+      32,
+      36,
+      64,
+      68,
+      40,
+      60
+    ],
+    "weights": [
+      3,
+      2,
+      2,
+      3,
+      3,
+      1,
+      6,
+      2,
+      2,
+      1,
+      2,
+      1,
+      1,
+      1
+    ],
+    "p_idle": 0.3,
+    "p_misaligned": 0.05,
+    "p_write": 0.5,
+    "data_values": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      8,
+      12,
+      16,
+      255,
+      65535,
+      4294967295
+    ]
+  },
+  "rules": {
+    "irq_src": {
+      "kind": "toggle",
+      "p_flip": 0.04
+    }
+  },
+  "cycles": 3000,
+  "runs": 2
+}

@@ -1,0 +1,42 @@
+{
+  "top": "traffic_light",
+  "clock": {
+    "name": "clk"
+  },
+  "reset": {
+    "name": "rst",
+    "active": 1,
+    "cycles": 2,
+    "random_rate": 0.002
+  },
+  "rules": {
+    "ped": {
+      "kind": "random",
+      "p1": 0.1
+    }
+  },
+  "phases": [
+    {
+      "cycles": 100,
+      "inputs": {}
+    },
+    {
+      "cycles": 60,
+      "inputs": {
+        "ped": {
+          "p1": 0.0
+        }
+      }
+    },
+    {
+      "cycles": 40,
+      "inputs": {
+        "ped": {
+          "p1": 0.6
+        }
+      }
+    }
+  ],
+  "cycles": 3000,
+  "runs": 3
+}

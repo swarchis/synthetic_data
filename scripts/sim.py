@@ -73,12 +73,12 @@ def run_tests(design, test_dir, timeout=DEFAULT_TIMEOUT):
         shutil.rmtree(work, ignore_errors=True)
 
 
-def run_once(work, make_args, extra_env, timeout):
+def run_once(work, make_args, extra_env, timeout, sources=("design.v",)):
     results = work / "results.xml"
     if results.exists():
         results.unlink()
     env = dict(os.environ, PWD=str(work), **extra_env)   # make reads $(PWD), not the real cwd
-    cmd = ["make", f"VERILOG_SOURCES={work / 'design.v'}"] + make_args
+    cmd = ["make", "VERILOG_SOURCES=" + " ".join(str(work / f) for f in sources)] + make_args
     # New session so a timeout can kill make and the simulator under it.
     proc = subprocess.Popen(cmd, cwd=work, env=env, stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, text=True, start_new_session=True)

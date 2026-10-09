@@ -1,0 +1,52 @@
+{
+  "top": "fifo",
+  "clock": {
+    "name": "clk"
+  },
+  "reset": {
+    "name": "rst",
+    "active": 1,
+    "cycles": 2,
+    "random_rate": 0.004
+  },
+  "phases": [
+    {
+      "cycles": 60,
+      "inputs": {
+        "push": {
+          "p1": 0.9
+        },
+        "pop": {
+          "p1": 0.2
+        }
+      }
+    },
+    {
+      "cycles": 60,
+      "inputs": {
+        "push": {
+          "p1": 0.2
+        },
+        "pop": {
+          "p1": 0.9
+        }
+      }
+    },
+    {
+      "cycles": 60,
+      "inputs": {
+        "push": {
+          "p1": 0.6
+        },
+        "pop": {
+          "p1": 0.6
+        }
+      }
+    }
+  ],
+  "compare": {
+    "dout": "not empty"
+  },
+  "cycles": 2000,
+  "runs": 3
+}
