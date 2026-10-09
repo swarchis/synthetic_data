@@ -175,8 +175,21 @@ def holes(src):
                      source=src[:s] + h["source"] + src[e:])
             if h["kind"] == "module":
                 bodies[(s, e)] = h
-                h = dict(h, kind="submodule")
+                # Inside a multi-module file this is "fill in one module": same TODO marker
+                # as other completion tasks.
+                h = dict(h, kind="submodule", source=h["source"].replace(MODULE_MARK, MARK))
             out.append(h)
+    # Two module bodies missing at once.
+    keys = sorted(bodies)
+    for i in range(len(keys)):
+        for k2 in range(i + 1, len(keys)):
+            pair = src
+            for (s, e) in (keys[k2], keys[i]):               # back to front keeps offsets valid
+                body = next(h for h in Holes(src[s:e]).all() if h["kind"] == "module")["source"]
+                pair = pair[:s] + body.replace(MODULE_MARK, MARK) + pair[e:]
+            l1 = src[:keys[i][0]].count("\n") + 1
+            out.append({"kind": "submodule_pair", "line": l1, "end_line": src[:keys[k2][1]].count("\n") + 1,
+                        "removed": "(two module bodies)", "source": pair})
     whole = src
     for (s, e) in sorted(bodies, reverse=True):          # back to front keeps offsets valid
         sub = Holes(src[s:e]).all()

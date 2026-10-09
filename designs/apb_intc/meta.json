@@ -6,5 +6,15 @@
   "created": "2026-10-09",
   "kind": "multi_module",
   "top": "apb_intc",
-  "build": {"presample_per_op": 25}
+  "build": {
+    "presample_per_op": 25,
+    "multi_k": [
+      3,
+      4,
+      5
+    ],
+    "multi_per_k": 15,
+    "multi_cross_module": true,
+    "holes_per_kind": 6
+  }
 }

@@ -38,7 +38,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from holes import holes
-from inject import combine, mutate
+from inject import combine, module_spans, mutate
 from sim import run_tests
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -74,22 +74,29 @@ def bug_info(m):
     return {"type": m["op"], "line": m["line"], "before": m["before"], "after": m["after"]}
 
 
-def multibug_candidates(seed, golden, caught, k, n):
+def multibug_candidates(seed, golden, caught, k, n, module_of=None):
     """Up to 2n combinations of k caught bugs: different lines, preferably
-    different bug types and at least 3 lines apart. Deterministic per seed."""
+    different bug types and at least 3 lines apart. Deterministic per seed.
+    With module_of (multi-module seeds), bugs must span at least min(k, 3)
+    modules while strict, and at least 2 always."""
     rng = random.Random(f"{seed}-multi-{k}")
     pool = sorted(caught, key=lambda m: (m["line"], m["op"], m["after"]))
     out, seen = [], set()
-    for attempt in range(400):
+    attempts, strict_until = (800, 600) if module_of else (400, 300)
+    for attempt in range(attempts):
         if len(out) >= 2 * n or len(pool) < k:
             break
         pick = sorted(rng.sample(pool, k), key=lambda m: m["line"])
         lines = [m["line"] for m in pick]
         if len(set(lines)) < k:
             continue
-        strict = attempt < 300      # relax the spacing rules if we run short
+        strict = attempt < strict_until      # relax the spacing rules if we run short
         if strict and (min(b - a for a, b in zip(lines, lines[1:])) < 3 or len({m["op"] for m in pick}) < k):
             continue
+        if module_of:
+            spread_over = len({module_of(m) for m in pick})
+            if spread_over < 2 or (strict and spread_over < min(k, 3)):
+                continue
         key = tuple((m["line"], m["after"]) for m in pick)
         if key in seen:
             continue
@@ -144,12 +151,20 @@ def build_seed(seed_dir, args):
                           "bug": bug_info(m), "failing_tests": failed})
 
     # Multiple bugs, built only from bugs the tests catch on their own.
+    # A seed's meta.json "build" section can change sizes, counts, and spread.
+    build = meta.get("build", {})
+    multi_k = build.get("multi_k", [2, 3])
+    multi_n = build.get("multi_per_k", args.multi)
+    module_of = None
+    if build.get("multi_cross_module"):
+        spans = module_spans(golden)
+        module_of = lambda m: next(i for i, (a, b) in enumerate(spans) if a <= m["edit"][0] < b)
     all_caught = [m for ms in caught.values() for m, _ in ms]
-    for k in (2, 3):
-        cands = multibug_candidates(seed, golden, all_caught, k, args.multi)
+    for k in multi_k:
+        cands = multibug_candidates(seed, golden, all_caught, k, multi_n, module_of)
         kept = 0
         for c, r in zip(cands, run_all([c["source"] for c in cands])):
-            if r["status"] == "fail" and kept < args.multi:
+            if r["status"] == "fail" and kept < multi_n:
                 kept += 1
                 tasks.append({"task_type": "multibug", "label": f"multi{k}", "source": c["source"],
                               "bugs": [bug_info(m) for m in c["bugs"]], "failing_tests": r["failed"]})
@@ -168,7 +183,7 @@ def build_seed(seed_dir, args):
         else:
             by_kind[h["kind"]].append((h, r))
     for kind in sorted(by_kind):
-        for h, r in spread(by_kind[kind], args.holes):
+        for h, r in spread(by_kind[kind], build.get("holes_per_kind", args.holes)):
             ttype = "module" if kind == "module" else "complete"
             tasks.append({"task_type": ttype, "label": f"hole_{kind}", "source": h["source"],
                           "hole": {"kind": kind, "lines": [h["line"], h["end_line"]], "removed": h["removed"]},
@@ -244,7 +259,9 @@ def main():
 
     cols = ["generated", "compile_error", "timeout", "pass", "capped", "kept"]
     names = ["bugs made", "no_compile", "hang", "survived", "capped", "bugfix"]
-    extra = ["multi2", "multi3", "complete", "module"]
+    extra = ["multi2", "multi3", "multi4+", "complete", "module"]
+    for r in rows:
+        r["multi4+"] = sum(v for k, v in r.items() if k.startswith("multi") and k[5:].isdigit() and int(k[5:]) >= 4)
     w = max([len("seed")] + [len(r["seed"]) for r in rows]) + 2
     table = [f"{'seed':<{w}}" + "".join(f"{n:>11}" for n in names + extra + ["total"])]
     for r in rows:
