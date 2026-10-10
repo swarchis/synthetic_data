@@ -1,0 +1,16 @@
+{
+  "model": "openai:gpt-5.6-luna",
+  "effort": "medium",
+  "prompt_version": "agent-v1",
+  "started": "2026-10-10T01:38:09",
+  "tasks": "/work/tasks",
+  "task_ids": "results/agent_pilot_tasks.txt",
+  "limit": 2,
+  "task_types": null,
+  "seeds": null,
+  "max_output": 16000,
+  "max_steps": 12,
+  "price_in": 1.0,
+  "price_out": 6.0,
+  "budget": 1.0
+}

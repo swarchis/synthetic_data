@@ -1,0 +1,16 @@
+model      openai:gpt-5.6-luna  (agent, max 12 tool calls, effort medium, prompt agent-v1)
+started    2026-10-10T01:38:09
+pass@1     2/2 = 100.0%
+
+outcomes   pass 2
+steps      12.0 tool calls per episode, 44s per episode
+habits     submitted 2/2; of those: compiled or tested after last edit 0, ran tests after last edit 0, used write_file 0, made no edit 0
+tools      replace 12, read_file 6, compile 2, run_tests 2, submit 2
+tokens     87682 in (76780 cached), 1577 out per episode
+cost       $0.1943 of $1.00 budget (prices in/out per 1M: $1.0 / $6.0; cached input counted at full price)
+
+by task type
+  multibug       2/2
+
+by seed
+  apb_intc       2/2
