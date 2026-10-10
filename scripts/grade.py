@@ -191,6 +191,10 @@ def grade(task_dir, candidate):
     elif r["status"] == "fail" and any(t.startswith("diff:") for t in r["failed"]):
         from diffcheck import first_mismatch
         reason = first_mismatch(r["log"])
+    elif r["status"] == "fail":
+        # Hand-written tests: name them, plus the first assertion message.
+        msg = next((l.strip() for l in r["log"].splitlines() if "AssertionError" in l and "raise " not in l), "")
+        reason = f"failed tests: {', '.join(r['failed'][:6])}" + (f"; {msg[:300]}" if msg else "")
     return {"status": r["status"], "reason": reason, "passed": r["passed"], "failed": r["failed"]}
 
 

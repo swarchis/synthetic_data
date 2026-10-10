@@ -1,0 +1,10 @@
+# The 7 ef_uart tasks the 20-step agent pilot (results/agent_..._steps-20_20261010-0145) failed,
+# re-run after spec.md was clarified (baud tick does not depend on EN).
+# First 4 failed on the BAUDGEN tick (baudtick gated by en); last 3 for other reasons.
+t_3df63de714  ef_uart  multibug  pilot:fail(baudtick)
+t_a362e1394f  ef_uart  multibug  pilot:fail(baudtick)
+t_949da024bb  ef_uart  multibug  pilot:fail(baudtick)
+t_6dbe2c4c7b  ef_uart  multibug  pilot:fail(baudtick)
+t_1893cfc935  ef_uart  multibug  pilot:fail(PRDATA)
+t_73fe6389a1  ef_uart  complete  pilot:fail(IRQ)
+t_712b46c4cb  ef_uart  complete  pilot:fail(tx)
