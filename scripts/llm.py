@@ -15,6 +15,8 @@ import json
 import math
 import os
 import re
+import threading
+import time
 import urllib.error
 import urllib.request
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
@@ -102,20 +104,38 @@ def actual_cost(stats, price_in, price_out):
 
 
 class Budget:
-    """Spent money plus money reserved for requests in flight."""
+    """Spent money plus money reserved for requests in flight. Thread-safe, so
+    agent episodes can reserve each turn from worker threads."""
 
     def __init__(self, limit, spent=0.0):
         self.limit, self.spent, self.reserved = limit, spent, 0.0
+        self.cond = threading.Condition()
 
     def reserve(self, worst):
-        if self.spent + self.reserved + worst > self.limit:
-            return False
-        self.reserved += worst
-        return True
+        with self.cond:
+            if self.spent + self.reserved + worst > self.limit:
+                return False
+            self.reserved += worst
+            return True
+
+    def reserve_wait(self, worst, timeout=900):
+        """Like reserve, but if other requests are in flight, wait for their money to
+        settle and try again. Gives up when nothing is in flight or after `timeout`."""
+        deadline = time.time() + timeout
+        with self.cond:
+            while self.spent + self.reserved + worst > self.limit:
+                left = deadline - time.time()
+                if self.reserved <= 1e-12 or left <= 0:
+                    return False
+                self.cond.wait(left)
+            self.reserved += worst
+            return True
 
     def settle(self, worst, actual):
-        self.reserved -= worst
-        self.spent += actual
+        with self.cond:
+            self.reserved -= worst
+            self.spent += actual
+            self.cond.notify_all()
 
     def why_not(self, worst):
         return (f"budget: spent ${self.spent:.4f} + ${self.reserved:.4f} in flight, next request could cost "

@@ -49,7 +49,8 @@ def compare_now(dut, cycle, env, run):
 
 
 async def run_one(dut, run):
-    rng = make_rng(f"{CFG['top']}-{json.dumps(PARAMS, sort_keys=True)}-{run}")
+    salt = f"-{CFG['salt']}" if CFG.get("salt") else ""      # visible runs: different stimulus
+    rng = make_rng(f"{CFG['top']}-{json.dumps(PARAMS, sort_keys=True)}-{run}{salt}")
     rules = CFG.get("inputs_rules", {})
     special = {RESET["name"]} if RESET else set()
     if CLOCK:

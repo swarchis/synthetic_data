@@ -60,8 +60,13 @@ def run_tests(design, test_dir, timeout=DEFAULT_TIMEOUT, golden=None):
                   [f"diff:{t}" for t in d["failed"]], log)
 
 
-def run_hand_tests(design, test_dir, timeout):
-    """The seed's own cocotb tests, once per parameter config."""
+def run_hand_tests(design, test_dir, timeout, only=None, first_config_only=False):
+    """The seed's own cocotb tests, once per parameter config. `only` limits the run to
+    those test names (agent mode's visible checks); `first_config_only` skips the rest
+    of a parameter sweep."""
+    # cocotb's makefile pastes the filter into a shell command unquoted, so it carries
+    # its own single quotes (and \Z, not $, which make would eat).
+    extra = {"COCOTB_TEST_FILTER": "'(^|\\.)(" + "|".join(only) + ")\\Z'"} if only else {}
 
     # Fresh folder per run, so parallel runs never share build files.
     work = Path(tempfile.mkdtemp(prefix="sim_"))
@@ -73,17 +78,17 @@ def run_hand_tests(design, test_dir, timeout):
 
         sweep = test_dir / "configs.json"
         if not sweep.exists():
-            return run_once(work, [], {}, timeout)
+            return run_once(work, [], extra, timeout)
 
         spec = json.loads(sweep.read_text())
         passed, logs = [], []
-        for cfg in spec["configs"]:
+        for cfg in spec["configs"][:1] if first_config_only else spec["configs"]:
             name, params = cfg["name"], cfg["params"]
             args = " ".join(f"-P{spec['top']}.{k}={v}" for k, v in params.items())
             # COMPILE_ARGS goes in the environment, not on the make command line: cocotb's
             # makefile appends its own flags (timescale etc.) with +=, which a command-line
             # value would silently override.
-            env = {"RTL_PARAMS": json.dumps(params), "COMPILE_ARGS": args}
+            env = {"RTL_PARAMS": json.dumps(params), "COMPILE_ARGS": args, **extra}
             r = run_once(work, [f"SIM_BUILD=sim_build_{name}"], env, timeout)
             logs.append(f"===== config {name} {params}: {r['status']}\n{r['log']}")
             if r["status"] != "pass":

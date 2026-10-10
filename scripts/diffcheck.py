@@ -80,8 +80,11 @@ def wrapper(golden_src, top):
             "endmodule\n")
 
 
-def diff_check(candidate_src, golden_src, cfg_dir, timeout=120):
-    """Returns {"status", "passed", "failed", "log"} like sim.run_tests."""
+def diff_check(candidate_src, golden_src, cfg_dir, timeout=120, visible=False):
+    """Returns {"status", "passed", "failed", "log"} like sim.run_tests.
+    visible=True is agent mode's visible check: one short run with its own random
+    seed, first parameter config only. The hidden check (the reward) uses the full
+    settings and seeds the agent never sees."""
     cfg_dir = Path(cfg_dir)
     cfg = json.loads((cfg_dir / "diff.json").read_text())
     top = cfg["top"]
@@ -91,6 +94,9 @@ def diff_check(candidate_src, golden_src, cfg_dir, timeout=120):
     cfg["inputs_rules"] = cfg.get("rules", {})
     sweep = cfg_dir / "configs.json"
     configs = json.loads(sweep.read_text())["configs"] if sweep.exists() else [{"name": "default", "params": {}}]
+    if visible:
+        cfg.update(runs=1, cycles=min(cfg.get("cycles", 2000), 1500), salt="visible")
+        configs = configs[:1]
 
     work = Path(tempfile.mkdtemp(prefix="diff_"))
     try:
