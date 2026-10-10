@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chip-Verification Agent Environments</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (~68ch) on a faint graph-paper ground; data rows and tables break out to a wider measure. */
+:root {
+  --bg: #f5f7f8;
+  --surface: #ffffff;
+  --ink: #15212b;
+  --muted: #56636e;
+  --rule: #d9e0e5;
+  --accent: #0f6b5c;      /* board-green ink */
+  --accent-soft: #d8ece7;
+  --oneshot: #9aa8b3;
+  --pass: #1d7f4e;
+  --fail: #b4472f;
+  --grid: rgba(21, 33, 43, 0.045);
+  --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f161c; --surface: #16212a; --ink: #e6ecf0; --muted: #9aa9b4; --rule: #2a3843;
+    --accent: #5cc4ae; --accent-soft: #173a35; --oneshot: #5b6b77; --pass: #5cc489; --fail: #e3866f;
+    --grid: rgba(230, 236, 240, 0.04); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f161c; --surface: #16212a; --ink: #e6ecf0; --muted: #9aa9b4; --rule: #2a3843;
+  --accent: #5cc4ae; --accent-soft: #173a35; --oneshot: #5b6b77; --pass: #5cc489; --fail: #e3866f;
+  --grid: rgba(230, 236, 240, 0.04); color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16.5px;
+  line-height: 1.6;
+  padding-inline: 20px;
+  padding-block: 0 72px;
+}
+.page { max-width: 880px; margin: 0 auto; display: grid; gap: 56px; }
+.prose { max-width: 68ch; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.08; font-weight: 800; font-stretch: 85%; }
+h2 { font-size: 1.6rem; line-height: 1.2; font-weight: 700; font-stretch: 90%; }
+h3 { font-size: 1.08rem; font-weight: 700; }
+p { margin: 0; }
+section { display: grid; gap: 18px; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.lede { font-size: 1.15rem; color: var(--muted); max-width: 62ch; }
+.mono { font-family: var(--font-mono); font-size: 0.9em; }
+a { color: var(--accent); }
+
+/* Hero */
+header.hero { padding-top: 56px; display: grid; gap: 18px; }
+.headline-stat {
+  display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: baseline;
+  border-top: 2px solid var(--ink); padding-top: 18px; margin-top: 8px;
+}
+.headline-stat .big { font-family: var(--font-display); font-weight: 800; font-size: clamp(2.4rem, 7vw, 3.6rem); line-height: 1; font-variant-numeric: tabular-nums; }
+.headline-stat .big .from { color: var(--oneshot); }
+.headline-stat .big .arrow { color: var(--muted); font-weight: 500; padding-inline: 6px; }
+.headline-stat .big .to { color: var(--accent); }
+.headline-stat .cap { color: var(--muted); max-width: 46ch; min-width: 0; }
+
+/* Results chart (HTML bars, widths are % of 100) */
+.chart { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 22px 22px 18px; display: grid; gap: 18px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 0.85rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.swatch { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+.row { display: grid; grid-template-columns: minmax(110px, 160px) 1fr; gap: 14px; align-items: center; }
+.row + .row { border-top: 1px dashed var(--rule); padding-top: 14px; }
+.row .label { font-weight: 600; min-width: 0; }
+.row .label small { display: block; font-weight: 400; color: var(--muted); font-size: 0.8rem; }
+.bars { display: grid; gap: 6px; min-width: 0; }
+.bar { position: relative; height: 22px; background: var(--grid); border-radius: 3px; }
+.bar i { position: absolute; inset: 0 auto 0 0; border-radius: 3px; }
+.bar.os i { background: var(--oneshot); }
+.bar.ag i { background: var(--accent); }
+.bar b { position: absolute; top: 50%; transform: translateY(-50%); font-family: var(--font-mono); font-weight: 500; font-size: 0.8rem; white-space: nowrap; }
+.row.total .label { font-family: var(--font-display); font-size: 1.05rem; }
+.axis { display: grid; grid-template-columns: minmax(110px, 160px) 1fr; gap: 14px; font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); }
+.axis div:last-child { display: flex; justify-content: space-between; }
+.note { font-size: 0.88rem; color: var(--muted); }
+
+/* Pipeline */
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.step { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.step .n { font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent); }
+.step p { font-size: 0.92rem; color: var(--muted); }
+
+/* Code sample */
+.sample { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.sample .cap { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--rule); }
+.sample pre { margin: 0; padding: 12px 14px; overflow-x: auto; font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.7; }
+.sample .del { color: var(--pass); }
+.sample .add { color: var(--fail); }
+.sample .msg { color: var(--muted); }
+
+/* Fact grid */
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0; border-top: 1px solid var(--rule); }
+.fact { padding: 16px 16px 16px 0; border-bottom: 1px solid var(--rule); display: grid; gap: 4px; min-width: 0; }
+.fact .v { font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.fact .k { color: var(--muted); font-size: 0.9rem; }
+
+/* Tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--font-mono); font-weight: 500; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pill { display: inline-block; font-family: var(--font-mono); font-size: 0.72rem; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+.pill.ok { background: var(--accent-soft); color: var(--accent); }
+.pill.gap { background: color-mix(in srgb, var(--fail) 16%, transparent); color: var(--fail); }
+
+/* Lists */
+ul.plain { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; }
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; }
+footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--rule); padding-top: 18px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (max-width: 520px) {
+  body { font-size: 16px; }
+  .row, .axis { grid-template-columns: 1fr; gap: 8px; }
+  .axis div:first-child { display: none; }
+}
+</style>
+
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <div class="eyebrow">rtl-env · results brief · October 2026</div>
+    <h1>Training environments for chip-verification agents</h1>
+    <p class="lede">Coding agents already read, edit, compile and test hardware designs. To get better at it, the model inside the agent needs practice on hard tasks with a score it can't argue with. We build those: "find and fix the bug" tasks from real Verilog designs, each graded by a simulator, served in the same tool loop agents already use.</p>
+    <div class="headline-stat">
+      <div class="big"><span class="to">10</span><span style="font-size:0.45em;color:var(--muted);font-weight:500"> of 40</span></div>
+      <p class="cap">hard tasks a current frontier model (GPT-5.6 Luna) still failed when running as an agent in our environment, with 20 tool actions per task. On our largest design it fixed only 3 of 10. Those failures are what an agent can still learn from.</p>
+    </div>
+  </header>
+
+  <section>
+    <div class="eyebrow">The result</div>
+    <h2>The environment works for agents, and the hardest design is still mostly unsolved</h2>
+    <div class="chart" role="img" aria-label="Bar chart: tasks fixed out of 40. APB interrupt controller 4 of 20 one-shot, 19 of 20 with tools. Efabless timer 3 of 10 one-shot, 8 of 10 with tools. Efabless UART 2 of 10 one-shot, 3 of 10 with tools. All 40: 9 one-shot, 30 with tools.">
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--oneshot)"></i>One shot (model sees the files, writes one answer)</span>
+        <span><i class="swatch" style="background:var(--accent)"></i>With tools (up to 20 actions, then submit)</span>
+      </div>
+      <div class="row">
+        <div class="label">Interrupt controller<small>APB bus, 5 modules · 20 tasks</small></div>
+        <div class="bars">
+          <div class="bar os"><i style="width:20%"></i><b style="left:calc(20% + 8px)">4 / 20</b></div>
+          <div class="bar ag"><i style="width:95%"></i><b style="right:8px;color:var(--surface)">19 / 20</b></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="label">Timer / PWM<small>open-source IP, 623 lines · 10 tasks</small></div>
+        <div class="bars">
+          <div class="bar os"><i style="width:30%"></i><b style="left:calc(30% + 8px)">3 / 10</b></div>
+          <div class="bar ag"><i style="width:80%"></i><b style="left:calc(80% + 8px)">8 / 10</b></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="label">UART<small>open-source IP, 1,178 lines · 10 tasks</small></div>
+        <div class="bars">
+          <div class="bar os"><i style="width:20%"></i><b style="left:calc(20% + 8px)">2 / 10</b></div>
+          <div class="bar ag"><i style="width:30%"></i><b style="left:calc(30% + 8px)">3 / 10</b></div>
+        </div>
+      </div>
+      <div class="row total">
+        <div class="label">All 40 tasks</div>
+        <div class="bars">
+          <div class="bar os"><i style="width:22.5%"></i><b style="left:calc(22.5% + 8px)">9 / 40</b></div>
+          <div class="bar ag"><i style="width:75%"></i><b style="left:calc(75% + 8px)">30 / 40</b></div>
+        </div>
+      </div>
+      <div class="axis"><div></div><div><span>0%</span><span>50%</span><span>100%</span></div></div>
+    </div>
+    <div class="prose" style="display:grid;gap:12px">
+      <p><strong>What the agent bars show.</strong> Working in our environment, the model fixed 30 of 40. That is what a training environment needs: tasks an agent can make progress on, a mix of passes and failures so the reward carries signal, and a grade it can't game. The 10 it still failed, 7 of them on the UART, are the room left to improve.</p>
+      <p><strong>What the one-shot bars show.</strong> We picked these 40 from tasks the model had already tried in a single answer, mostly failures, so that bar is low by design. On the same tasks, the tool loop flipped 21 from fail to pass and broke none of the 9 one-shot passes: the tasks reward actually investigating, compiling and testing, which is the skill agents are trained for.</p>
+      <p><strong>On a fair sample</strong> the one-shot numbers are 31% on the two open-source designs and about 78% on the interrupt controller. Our first, simpler designs were too easy (the model solved 559 of 560), which is why we moved to these.</p>
+      <p><strong>No gaming seen.</strong> In 40 runs the model never rewrote a whole file to dodge the work, and 38 of 40 submissions were compiled or tested after the last edit. Cost was about $0.17 per run at list prices.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Who it's for</div>
+    <h2>Teams improving the model behind a chip agent</h2>
+    <div class="steps">
+      <div class="step"><h3>Frontier labs</h3><p>Hard, verifiable hardware tasks to train models with reinforcement learning, packaged as agent environments that plug into existing training loops.</p></div>
+      <div class="step"><h3>Chip-AI companies</h3><p>Evaluations to measure their agents and training data to improve them, without hand-building hundreds of verified tasks and clean specs.</p></div>
+      <div class="step"><h3>EDA vendors</h3><p>Benchmarks and training sets for AI features in verification tools, on designs they can license and audit.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">How a task is made</div>
+    <h2>Start from a design that works, break it, keep only breaks we can catch</h2>
+    <div class="steps">
+      <div class="step"><span class="n">step 1</span><h3>A working design</h3><p>A correct Verilog design with a written spec. 11 are written in-house; 2 are open-source efabless IP (Apache-2.0, credited).</p></div>
+      <div class="step"><span class="n">step 2</span><h3>Break it automatically</h3><p>Our injector makes small realistic edits: a flipped comparison, a wrong constant, a swapped signal, a deleted line. It also removes logic for "fill in the missing part" tasks.</p></div>
+      <div class="step"><span class="n">step 3</span><h3>Keep only catchable bugs</h3><p>Each broken version is simulated. If our checks can't tell it from the original, it is thrown away, so every task has a real, detectable problem.</p></div>
+      <div class="step"><span class="n">step 4</span><h3>Grade by simulation</h3><p>The fix runs against hidden checks: hand-written tests, plus a side-by-side run against the original on thousands of random cycles, at several parameter settings.</p></div>
+    </div>
+    <div class="sample">
+      <div class="cap">real task · timer IP · one injected bug and the hidden check's verdict</div>
+<pre><span class="del">- else if (apb_we &amp; (PADDR[16-1:0] == PWM1CFG_REG_OFFSET)) PWM1CFG_REG &lt;= PWDATA[16-1:0];</span>
+<span class="add">+ else if (apb_we &amp; (PADDR[16+1:0] == PWM1CFG_REG_OFFSET)) PWM1CFG_REG &lt;= PWDATA[16-1:0];</span>
+
+<span class="msg">grader: fail · run 5 cycle 1329: output PRDATA = 0x4dc2, expected 0xf16c</span></pre>
+    </div>
+    <p class="note prose">The model sees the spec and the broken file. It never sees the original, the tests, or the random inputs the grader uses.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">The agent environment</div>
+    <h2>A sandbox where a model works like an engineer</h2>
+    <div class="prose" style="display:grid;gap:12px">
+      <p>Each task opens as a private workspace holding only the spec and the design. The model can read and search files, make exact edits, compile, and run a light set of practice tests. When it submits, the full hidden grade runs once and returns pass or fail. That pass or fail is the training reward.</p>
+      <p>The practice tests are deliberately weaker than the grade: fewer tests, one parameter setting, and different random inputs. Passing practice does not guarantee a pass, which is what keeps a model from simply tuning to the tests.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Why the scores can be trusted</div>
+    <h2>We tested the grader before trusting it</h2>
+    <div class="facts">
+      <div class="fact"><span class="v">637</span><span class="k">broken designs: our side-by-side checker caught exactly the same ones as hand-written tests</span></div>
+      <div class="fact"><span class="v">0 of 738</span><span class="k">correct model answers wrongly failed</span></div>
+      <div class="fact"><span class="v">0 of 193</span><span class="k">wrong model answers wrongly passed</span></div>
+      <div class="fact"><span class="v">90 of 90</span><span class="k">sandbox checks passed: the correct answer scores 1, doing nothing scores 0, reading outside the workspace is refused, endless loops are cut off</span></div>
+      <div class="fact"><span class="v">1,009</span><span class="k">tasks, each confirmed to pass on the original and fail on the broken version</span></div>
+      <div class="fact"><span class="v">$ cap</span><span class="k">paid model runs reserve each request's worst case first; proven against a fake billing server that the cap can't be exceeded</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Spec audit</div>
+    <h2>We use model failures to find mistakes in our own specs</h2>
+    <div class="prose" style="display:grid;gap:12px">
+      <p>A task is only fair if the spec fully describes the correct design. Real IP has quirks, and if the spec misses one, a model that follows the spec gets marked wrong. Training on that teaches the wrong lesson.</p>
+      <p>So we look for places where many independent model answers "fix" code that was already correct. Our tool swaps each module of a failed answer into the original design one at a time and simulates it, which pinpoints exactly where the answer's behavior differs. Then we check each spot by hand.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Design</th><th>Failed answers checked</th><th>Finding</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Timer / PWM</td><td class="num">18</td><td>Only 1 answer changed correct code. Failures were real unfixed bugs.</td><td><span class="pill ok">spec clean</span></td></tr>
+          <tr><td>Interrupt controller</td><td class="num">17</td><td>All 5 cases were the same model mistake (wiring the wrong clock).</td><td><span class="pill ok">spec clean</span></td></tr>
+          <tr><td>UART</td><td class="num">51</td><td>10 places where the spec was vague or wrong about the original's behavior, for example: the baud tick runs even when disabled; a simultaneous read and write on an empty FIFO loses the word; the frame-error flag ignores the last stop bit. Also one spot where the spec called a value "undefined" but the grader still checked it.</td><td><span class="pill gap">10 gaps fixed</span></td></tr>
+          <tr><td>The 10 smaller designs</td><td class="num">n/a</td><td>The model rebuilt each one from its spec alone and passed, so the specs already pin the design down.</td><td><span class="pill ok">spec clean</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="callout prose">The lesson: in our hardest design, many failures that looked like "the model can't do this" were really "our spec didn't say this." Most dataset builders never find these, and they end up in training data.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">What's in the set today</div>
+    <h2>1,009 tasks across 13 designs</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Task type</th><th>What the model does</th><th>Count</th></tr></thead>
+        <tbody>
+          <tr><td>Bug fix</td><td>Find and fix one bug</td><td class="num">583</td></tr>
+          <tr><td>Multi-bug</td><td>Find and fix 2 to 5 bugs, sometimes across modules</td><td class="num">289</td></tr>
+          <tr><td>Complete</td><td>Write logic that was removed (a statement, a block, a whole submodule)</td><td class="num">124</td></tr>
+          <tr><td>Module</td><td>Write a whole design from its spec</td><td class="num">13</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="plain prose">
+      <li><strong>Benchmark-clean.</strong> No design comes from the source projects behind NVIDIA's CVDP benchmark, so training on our tasks can't leak into that benchmark.</li>
+      <li><strong>Licensed.</strong> Open-source designs keep their license and credit; the rest are ours.</li>
+      <li><strong>For reference:</strong> on CVDP itself, the same frontier model scores 50.7% and a 7B open model 12.9% (non-agentic, problems that need no commercial simulator).</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="eyebrow">What we haven't shown yet</div>
+    <h2>Open questions, stated plainly</h2>
+    <ul class="plain prose">
+      <li><strong>Training transfer.</strong> We have not yet trained a model on these tasks and measured it on an outside benchmark. That is the next proof point.</li>
+      <li><strong>Bug realism.</strong> Today's bugs are generated edits. Real bugs are often design misunderstandings across several lines. Next we add tasks built from real bug-fix commits in open-source hardware projects.</li>
+      <li><strong>Sample size.</strong> The agent result is one model, one run per task, 40 tasks on 3 designs.</li>
+      <li><strong>Hard designs.</strong> We have 3 designs at the level where frontier models struggle; we are adding more.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="eyebrow">What we'd like to learn from you</div>
+    <h2>Three questions</h2>
+    <ul class="plain prose">
+      <li>Would you judge an environment like this on task quality, or do you need a training result first?</li>
+      <li>Which designs and bug types matter most for your work: bus protocols, datapaths, CPUs, something else?</li>
+      <li>One-shot tasks, agent environments, or both?</li>
+    </ul>
+  </section>
+
+  <footer>rtl-env · Swarchis Kulkarni and Noel Thomas · Numbers from runs on 9 to 10 October 2026. Simulator: Icarus Verilog 12 with cocotb.</footer>
+</div>
+</body>
+</html>
