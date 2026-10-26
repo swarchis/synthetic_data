@@ -1,0 +1,16 @@
+{
+  "model": "openai:gpt-6-luna",
+  "think": "off",
+  "effort": "medium",
+  "prompt_version": "v2",
+  "temperature": null,
+  "started": "2026-10-26T22:41:44",
+  "tasks": "/work/tasks",
+  "limit": null,
+  "task_types": null,
+  "seeds": null,
+  "max_output": 24000,
+  "price_in": 0.2,
+  "price_out": 1.0,
+  "budget": 10.0
+}

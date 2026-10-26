@@ -25,7 +25,7 @@ The file contains these modules: `EF_TMR32_APB` (top: APB registers and interrup
 | PREADY | out | 1 | Always 1. |
 | IRQ | out | 1 | Interrupt: OR of the masked interrupt status bits. |
 | pwm0, pwm1 | out | 1 each | PWM outputs. |
-| pwm_fault | in | 1 | Fault input; forces both PWM outputs low (see "Fault handling"). |
+| pwm_fault | in | 1 | Fault input. It reaches the PWM outputs only through the fault latch (see "Fault handling"), so they go low one clock edge after `pwm_fault` rises, never combinationally. |
 
 ## APB writes and reads
 
@@ -109,7 +109,7 @@ Action codes: 00 keep, 01 set low, 10 set high, 11 invert. If no event matches e
 - with DTE = 1: out0 = delayed AND state0; out1 = NOT delayed AND NOT state0 (complementary outputs with a gap);
 - with DTE = 0: out0 = state0; out1 = state1.
 
-Then `pwmN = (outN XOR PIN) AND NOT fault AND PNE`, combinationally.
+Then `pwmN = (outN XOR PIN) AND NOT fault_latch AND PNE`, combinationally, where `fault_latch` is the registered latch from "Fault handling" (not the `pwm_fault` input itself).
 
 ## Fault handling
 
