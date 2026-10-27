@@ -4,6 +4,7 @@ __pycache__/
 *.vvp
 .DS_Store
 tasks/
+tasks_hard/
 .server_logs/
 .env
 *.env

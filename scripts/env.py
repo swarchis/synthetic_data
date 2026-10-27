@@ -40,6 +40,8 @@ TASK_TEXT = {
     "complete": "Some logic in the design was removed and replaced with a `// TODO: missing logic` comment. "
                 "Write the missing logic so the design matches its specification.",
     "module": "The design has only its module interfaces. Write the module bodies so the design matches its specification.",
+    "review": "The design may not match its specification. Review it and fix every bug you find. It may contain several "
+              "bugs, or none: if it already matches the specification, submit it unchanged.",
 }
 
 TOOLS = {
@@ -86,7 +88,7 @@ class RTLEnv:
         design = (self.task_dir / "buggy.v").read_text()
         files = (f"  {self.design_name}  ({len(design.splitlines())} lines)\n"
                  f"  spec.md  ({len(spec.splitlines())} lines)")
-        task = TASK_TEXT[self.meta.get("task_type", "bugfix")]
+        task = TASK_TEXT[self.meta.get("prompt") or self.meta.get("task_type", "bugfix")]
         return (f"{task}\n\nRules: keep every module name, port, and parameter exactly the same. "
                 f"You have {self.max_steps} tool calls; finish with submit. Use compile and run_tests to check your work.\n\n"
                 f"Workspace files:\n{files}\n\nThe design is in {self.design_name}. The specification (also in spec.md):\n\n"

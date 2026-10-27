@@ -50,7 +50,7 @@ from llm import Budget, actual_cost, ask_ollama, ask_openai, is_paid, run_pool, 
 
 ROOT = Path(__file__).resolve().parent.parent
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://host.docker.internal:11434")
-PROMPT_VERSION = "v2"   # v2 adds prompts for new task types; the bugfix prompt is unchanged from v1
+PROMPT_VERSION = "v3"   # v3 adds the "review" prompt (tasks_hard); earlier prompts unchanged since v1/v2
 MAX_ERRORS_IN_A_ROW = 3
 
 SYSTEM = "You are an expert digital design and verification engineer."
@@ -69,6 +69,11 @@ INSTRUCTIONS = {
     "module": ("The Verilog module below has only its interface. Write the body so the module matches\n"
                "its specification, and return the complete file.",
                "- Declare any internal signals you need.", "Incomplete file"),
+    # tasks_hard: no bug count, and some designs have no bug at all
+    "review": ("The Verilog module below may not match its specification. Review it against the specification\n"
+               "and fix every bug you find. It may contain several bugs, or none: if it already matches the\n"
+               "specification, return it unchanged. Return the complete file.",
+               "- Change only what is needed to fix bugs.", "File to review"),
 }
 
 PROMPT = """{task}
@@ -118,7 +123,7 @@ def extract(answer, top, modules=None):
 
 def build_prompt(task_dir):
     meta = json.loads((task_dir / "meta.json").read_text())
-    task, rule, label = INSTRUCTIONS[meta.get("task_type", "bugfix")]
+    task, rule, label = INSTRUCTIONS[meta.get("prompt") or meta.get("task_type", "bugfix")]
     prompt = PROMPT.format(task=task, rule=rule, label=label, spec=(task_dir / "spec.md").read_text().strip(),
                            top=meta["top"], buggy=(task_dir / "buggy.v").read_text().rstrip())
     return meta, prompt

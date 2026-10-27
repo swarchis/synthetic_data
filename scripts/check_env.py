@@ -95,12 +95,13 @@ def check_task(task_dir, max_steps):
             outs, r, _ = run(env, calls)
             expect("patcher", r == 1.0, f"{env.final} {[o[:120] for o in outs]}")
 
+        clean = env.meta["task_type"] == "clean"          # decoy: the untouched design is correct
         outs, r, _ = run(env, [("submit", {})])
-        expect("lazy", r == 0.0, str(env.final))
+        expect("lazy", r == (1.0 if clean else 0.0), str(env.final))
 
         outs, r, _ = run(env, peeker(env))
         refused = all(o.startswith(("Error:", "Not replaced")) for o in outs[:-1])
-        expect("peeker", refused and r == 0.0, f"{[o[:100] for o in outs[:-1]]}")
+        expect("peeker", refused and r == (1.0 if clean else 0.0), f"{[o[:100] for o in outs[:-1]]}")
         leaked = [o for o in outs if "endmodule" in o or "root:" in o]
         expect("peeker-leak", not leaked, leaked[:1])
 
@@ -112,7 +113,7 @@ def check_task(task_dir, max_steps):
         vis = visible_check(env.task_dir, (env.task_dir / "buggy.v").read_text())
     finally:
         env.close()
-    return ok, notes, vis["status"] != "pass"
+    return ok, notes, None if clean else vis["status"] != "pass"
 
 
 def main():
@@ -131,7 +132,7 @@ def main():
     rng = random.Random(0)
     picked = []
     for s in seeds:
-        for tt in ("bugfix", "multibug", "complete", "module"):
+        for tt in ("bugfix", "multibug", "complete", "module", "clean"):
             pool = by_seed.get(s, {}).get(tt, [])
             picked += rng.sample(pool, min(a.per_seed, len(pool)))
 
@@ -140,13 +141,14 @@ def main():
         meta = json.loads((t / "meta.json").read_text())
         ok, notes, vis_caught = check_task(t, a.max_steps)
         bad += not ok
-        caught += vis_caught
-        print(f"{'ok  ' if ok else 'BAD '} {t.name} {meta['seed']:16} {meta['task_type']:9} "
-              f"visible {'catches' if vis_caught else 'misses '} the bug", flush=True)
+        caught += bool(vis_caught)
+        seen = "no bug" if vis_caught is None else f"visible {'catches' if vis_caught else 'misses '} the bug"
+        print(f"{'ok  ' if ok else 'BAD '} {t.name} {meta['seed']:16} {meta['task_type']:9} {seen}", flush=True)
         for n in notes:
             print("     ", n[:600])
+    n_bug = sum(json.loads((t / "meta.json").read_text())["task_type"] != "clean" for t in picked)
     print(f"\n{len(picked) - bad}/{len(picked)} tasks behave; visible checks catch the starting bug in "
-          f"{caught}/{len(picked)} (hidden grade catches all by construction)")
+          f"{caught}/{n_bug} (hidden grade catches all by construction)")
     sys.exit(1 if bad else 0)
 
 

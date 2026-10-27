@@ -199,8 +199,8 @@ def build_seed(seed_dir, args):
     return row, tasks, survivors
 
 
-def write_task(t):
-    task_dir = TASKS / t["task_id"]
+def write_task(t, root=TASKS):
+    task_dir = root / t["task_id"]
     task_dir.mkdir(parents=True)
     seed_dir, meta = t["seed_dir"], t["meta"]
     shutil.copy(seed_dir / "spec.md", task_dir / "spec.md")
@@ -217,11 +217,11 @@ def write_task(t):
             shutil.copy(seed_dir / extra, tests)
     info = {"task_id": t["task_id"], "task_type": t["task_type"], "label": t["label"],
             "seed": seed_dir.name, "top": meta["top"]}
-    for key in ("bug", "bugs", "hole"):
+    for key in ("bug", "bugs", "hole", "prompt", "decoy"):
         if key in t:
             info[key] = t[key]
     info.update(failing_tests=t["failing_tests"], source=meta["source"], license=meta["license"],
-                generator=GENERATOR)
+                generator=t.get("generator", GENERATOR))
     (task_dir / "meta.json").write_text(json.dumps(info, indent=2) + "\n")
 
 
