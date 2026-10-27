@@ -1,0 +1,24 @@
+model      openai:gpt-6-luna (effort medium, prompt tg1)
+task       write a cocotb test that passes on golden and fails on the buggy design
+score      56/65 = 86.2%
+outcomes   pass 56, fails_golden 6, rejected 3
+cost       $0.2221 (prices in/out per 1M: $0.2 / $1.0)
+
+by task type
+  bugfix           32/38
+  multibug         24/27
+
+by seed
+  alu              2/5
+  apb_intc         4/5
+  counter          5/5
+  edge_detector    5/5
+  ef_tmr32         5/5
+  ef_uart          3/5
+  fifo             5/5
+  priority_encoder 5/5
+  pwm              5/5
+  rr_arbiter       5/5
+  shift_reg        4/5
+  traffic_light    3/5
+  uart_tx          5/5
