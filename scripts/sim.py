@@ -100,11 +100,13 @@ def run_hand_tests(design, test_dir, timeout, only=None, first_config_only=False
         shutil.rmtree(work, ignore_errors=True)
 
 
-def run_once(work, make_args, extra_env, timeout, sources=("design.v",)):
+def run_once(work, make_args, extra_env, timeout, sources=("design.v",), base_env=None):
+    """base_env replaces os.environ for the simulator (testgen.py passes a minimal one,
+    so model-written tests never see secrets like OPENAI_API_KEY)."""
     results = work / "results.xml"
     if results.exists():
         results.unlink()
-    env = dict(os.environ, PWD=str(work), **extra_env)   # make reads $(PWD), not the real cwd
+    env = dict(os.environ if base_env is None else base_env, PWD=str(work), **extra_env)   # make reads $(PWD)
     cmd = ["make", "VERILOG_SOURCES=" + " ".join(str(work / f) for f in sources)] + make_args
     # New session so a timeout can kill make and the simulator under it.
     proc = subprocess.Popen(cmd, cwd=work, env=env, stdout=subprocess.PIPE,

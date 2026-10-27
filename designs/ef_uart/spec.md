@@ -95,7 +95,7 @@ On baud ticks: in idle, a 0 on the input starts a frame; the receiver waits SC/2
 - **Parity error:** the sampled parity bit does not match the expected value for the received data.
 - **Frame error:** only a stop bit sampled *before* the last one counts (a quirk of the original IP). With STP2 = 1, the flag is set when the first stop bit is sampled as 0. A 0 in the last stop bit is not reported, so with STP2 = 0 the frame error flag is never set.
 - **Match:** the received word equals MATCH.
-- **Break:** the input has been 0 for 12 consecutive bit samples while receiving.
+- **Break:** a 12-bit history of input samples (reset to all 1s) shifts in the receiver input at every data, parity, and stop bit sample (not at the start bit check). It is never cleared between frames or while idle, so samples from back-to-back frames count together. The break flag is high whenever all 12 entries are 0.
 
 Parity error, frame error, and match are flags for the cycle in which a word completes.
 

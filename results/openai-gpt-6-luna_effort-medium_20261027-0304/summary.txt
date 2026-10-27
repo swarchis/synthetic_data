@@ -1,0 +1,30 @@
+model      openai:gpt-6-luna  (effort: medium, prompt v3)
+started    2026-10-27T03:04:08
+pass@1     176/184 = 95.7%
+
+outcomes   pass 176, fail 7, rejected 1
+time       254.7 min total, 83s per task, 9882 output tokens per task
+cost       $2.1888 of $3.00 budget (prices in/out per 1M: $0.2 / $1.0)
+
+by task type
+  bugfix         98/101
+  clean          23/23
+  multibug       55/60
+
+by label
+  blocking_assign 7/7
+  clean_edit     20/20
+  clean_golden   3/3
+  drop_term      29/30
+  off_by_one     19/20
+  priority_swap  9/9
+  reset_missing  19/19
+  stage_swap     11/12
+  subtle2        26/30
+  subtle3        29/30
+  width_trunc    4/4
+
+by seed
+  apb_intc       51/53
+  ef_tmr32       51/53
+  ef_uart        74/78
