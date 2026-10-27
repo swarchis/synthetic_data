@@ -1,0 +1,16 @@
+CVDP v1.1.0, non-agentic code generation, no-commercial subset (302 problems)
+model      openai:gpt-6-luna, reasoning effort medium, 1 sample per problem (pass@1, n=1)
+prompts    CVDP's own exported prompts, unchanged (scripts/cvdp_infer.py), 8 requests at a time
+harness    NVlabs/cvdp_benchmark @ 8e894cf, nvidia/cvdp-sim:v1.0.0 built locally (arm64), graded with -t 4
+date       2026-10-26, $0.77 counted at $0.20/M in, $1.00/M out (2x list price)
+
+pass@1     169/302 = 56.0%     (gpt-5.6-luna: 153/302 = 50.7%)
+
+by category                       gpt-6-luna   gpt-5.6-luna
+  cid002 code completion          47/94        44/94
+  cid003 spec to RTL              45/78        42/78
+  cid004 code modification        36/55        33/55
+  cid007 lint / QoR improvement   19/40        12/40
+  cid016 debugging / bug fixing   22/35        22/35
+
+overlap    both pass 140, 6-luna only 29, 5.6-luna only 13, neither 120

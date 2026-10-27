@@ -1,0 +1,19 @@
+model      openai:gpt-6-luna  (effort: medium, prompt v2)
+started    2026-10-26T23:50:40
+pass@1     26/30 = 86.7%
+
+outcomes   pass 26, fail 2, no_answer 1, compile_error 1
+time       37.9 min total, 76s per task, 9386 output tokens per task
+WARNING    1 answers hit the token limit and were cut off
+cost       $0.3377 of $1.00 budget (prices in/out per 1M: $0.2 / $1.0)
+
+by task type
+  multibug       26/30
+
+by label
+  multi2         9/10
+  multi3         8/10
+  multi4         9/10
+
+by seed
+  ef_tmr32       26/30
