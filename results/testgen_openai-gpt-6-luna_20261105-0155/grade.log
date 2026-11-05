@@ -1,0 +1,77 @@
+grading 39 answers (0 already graded), 10 at a time
+  apb_intc: 119/120 candidate bugs show at default parameters
+  [1/39] counter#0            graded       score 1.00  caught 8/8
+  [2/39] counter#2            fails_golden score 0.00  fails on the correct design: counter_behavior; AssertionError: assert 1 == 0
+  [3/39] alu#0                no_answer    score 0.00  no python code block
+  [4/39] counter#1            graded       score 1.00  caught 8/8
+  [5/39] alu#1                rejected     score 0.00  not allowed: syntax error: invalid hexadecimal literal (<unknown>, line 89)
+  [6/39] edge_detector#2      graded       score 1.00  caught 40/40
+  [7/39] alu#2                graded       score 1.00  caught 40/40
+  [8/39] edge_detector#0      graded       score 1.00  caught 40/40
+  [9/39] edge_detector#1      graded       score 1.00  caught 40/40
+  [10/39] apb_intc#1           fails_golden score 0.00  fails on the correct design: priority_enable_threshold_and_status
+  [11/39] apb_intc#2           fails_golden score 0.00  fails on the correct design: priority_enable_threshold_claim_and_complete; AssertionError: assert 2 
+  [12/39] priority_encoder#1   graded       score 1.00  caught 30/30
+  [13/39] priority_encoder#0   graded       score 1.00  caught 30/30
+  [14/39] fifo#1               graded       score 1.00  caught 40/40
+  [15/39] priority_encoder#2   graded       score 1.00  caught 30/30
+  [16/39] ef_uart#0            fails_golden score 0.00  fails on the correct design: fifo_levels_flush_and_interrupts, receiver_data_parity_match_and_frame_
+  [17/39] fifo#0               graded       score 1.00  caught 40/40
+  [18/39] ef_tmr32#2           fails_golden score 0.00  fails on the correct design: register_map_and_async_reset, timer_counting_modes_and_prescaler, inter
+  [19/39] apb_intc#0           fails_golden score 0.00  fails on the correct design: apb_intc_behavior; AssertionError: assert 1 == 0
+  [20/39] pwm#0                graded       score 1.00  caught 40/40
+  [21/39] ef_tmr32#0           fails_golden score 0.00  fails on the correct design: register_map_and_apb, down_count_one_shot_and_prescaler_interval; Asser
+  [22/39] ef_tmr32#1           fails_golden score 0.00  fails on the correct design: apb_registers_and_reset; AssertionError: address 0x0004: got 0x12345678
+  [23/39] fifo#2               fails_golden score 0.00  fails on the correct design: fifo_behavior; RuntimeError: Attempting settings a value during the Rea
+  [24/39] ef_uart#2            graded       score 0.53  caught 21/40
+  [25/39] rr_arbiter#0         graded       score 1.00  caught 40/40
+  [26/39] ef_uart#1            graded       score 0.47  caught 19/40
+  [27/39] rr_arbiter#1         graded       score 1.00  caught 40/40
+  [28/39] rr_arbiter#2         graded       score 1.00  caught 40/40
+  [29/39] pwm#2                graded       score 1.00  caught 40/40
+  [30/39] shift_reg#0          graded       score 1.00  caught 40/40
+  [31/39] shift_reg#1          graded       score 1.00  caught 40/40
+  [32/39] pwm#1                graded       score 1.00  caught 40/40
+  [33/39] shift_reg#2          fails_golden score 0.00  fails on the correct design: shift_register_behavior; NameError: name 'RisingEdge' is not defined. D
+  [34/39] traffic_light#0      graded       score 1.00  caught 40/40
+  [35/39] traffic_light#1      graded       score 1.00  caught 40/40
+  [36/39] uart_tx#1            graded       score 1.00  caught 40/40
+  [37/39] traffic_light#2      fails_golden score 0.00  fails on the correct design: traffic_light_behavior; AssertionError: state mismatch: got 1, expected
+  [38/39] uart_tx#0            graded       score 0.97  caught 39/40
+  [39/39] uart_tx#2            graded       score 1.00  caught 40/40
+
+model      openai:gpt-6-luna (effort medium, prompt ts1)
+task       spec-only test suite; score = share of hidden buggy versions caught, if it passes golden
+score      64.0% mean over 39 suites
+outcomes   graded 26, fails_golden 11, no_answer 1, rejected 1
+cost       $0.1631 (prices in/out per 1M: $0.2 / $1.0)
+
+by seed (mean score; each suite's score; mutants)
+  alu               33.3%   0.00 RJ 1.00             40
+  apb_intc           0.0%   FG FG FG                 40
+  counter           66.7%   1.00 FG 1.00             8
+  edge_detector    100.0%   1.00 1.00 1.00           40
+  ef_tmr32           0.0%   FG FG FG                 40
+  ef_uart           33.3%   FG 0.53 0.47             40
+  fifo              66.7%   1.00 1.00 FG             40
+  priority_encoder 100.0%   1.00 1.00 1.00           30
+  pwm              100.0%   1.00 1.00 1.00           40
+  rr_arbiter       100.0%   1.00 1.00 1.00           40
+  shift_reg         66.7%   1.00 1.00 FG             40
+  traffic_light     66.7%   1.00 1.00 FG             40
+  uart_tx           99.2%   1.00 0.97 1.00           40
+
+bugs caught by label (over suites that passed golden)
+  arith_flip       46/54
+  compare_flip     41/43
+  const_change     136/144
+  delete_stmt      68/68
+  drop_not         18/22
+  invert_if        54/62
+  logic_flip       33/37
+  multi2           173/174
+  multi3           156/158
+  multi4           6/6
+  signal_swap      149/153
+  state_swap       25/25
+
