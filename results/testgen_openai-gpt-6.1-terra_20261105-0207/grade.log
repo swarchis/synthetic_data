@@ -1,0 +1,39 @@
+grading 9 answers (0 already graded), 10 at a time
+  apb_intc: 119/120 candidate bugs show at default parameters
+  [1/9] apb_intc#0           rejected     score 0.00 partial 0.00  not allowed: attribute ._mapped, attribute ._src
+  [2/9] apb_intc#2           graded       score 1.00 partial 1.00  caught 40/40
+  [3/9] apb_intc#1           graded       score 1.00 partial 1.00  caught 40/40
+  [4/9] ef_tmr32#1           graded       score 0.85 partial 0.85  caught 34/40
+  [5/9] ef_uart#1            fails_golden score 0.00 partial 0.72  fails on the correct design: receive_formats_and_errors; AssertionError: assert 133 == 225
+  [6/9] ef_uart#0            fails_golden score 0.00 partial 0.78  fails on the correct design: loopback_filter_and_timeout; AssertionError: assert 179 == 182
+  [7/9] ef_tmr32#0           graded       score 0.95 partial 0.95  caught 38/40
+  [8/9] ef_uart#2            fails_golden score 0.00 partial 0.72  fails on the correct design: receiver_formats_and_errors; AssertionError: assert (55 & 255) == 211
+  [9/9] ef_tmr32#2           fails_golden score 0.00 partial 0.88  fails on the correct design: restart_and_enable
+
+model      openai:gpt-6.1-terra (effort medium, prompt ts1)
+task       spec-only test suite; score = share of hidden buggy versions caught, if it passes golden
+score      42.2% mean over 9 suites (strict: 0 unless the suite passes golden)
+partial    76.7% mean (tests that fail golden dropped, the rest still count)
+outcomes   graded 4, fails_golden 4, rejected 1
+cost       $0.6194 (prices in/out per 1M: $2.0 / $10.0)
+
+by seed (strict mean; partial mean; each suite strict/partial; mutants)
+  apb_intc          66.7%   66.7%   RJ 1.00/1.00 1.00/1.00             40
+  ef_tmr32          60.0%   89.2%   0.85/0.85 0.95/0.95 FG/0.88        40
+  ef_uart            0.0%   74.2%   FG/0.72 FG/0.78 FG/0.72            40
+
+bugs caught by label (over suites that passed golden)
+  arith_flip       13/18
+  compare_flip     8/8
+  const_change     10/10
+  delete_stmt      4/4
+  drop_not         10/10
+  invert_if        10/10
+  logic_flip       10/12
+  multi2           8/8
+  multi3           20/20
+  multi4           22/22
+  multi5           10/10
+  signal_swap      13/14
+  state_swap       14/14
+

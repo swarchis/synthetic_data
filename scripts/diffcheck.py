@@ -3,8 +3,9 @@
     python3 scripts/diffcheck.py <candidate.v> <golden.v> <seed_or_test_dir>
 
 <seed_or_test_dir> holds diff.json (and optionally configs.json for parameter
-sweeps). The golden design's modules are renamed (<name>__ref) so both versions
-live in one simulation; a generated top module (diff_top) feeds them identical
+sweeps). The golden design's modules are renamed (<name>__ref_<random>, new on
+every run, so a candidate can't name the golden copy) so both versions live in one
+simulation; a generated top module (diff_top) feeds them identical
 inputs, and scripts/diff_test.py compares every output every cycle.
 
 No hand-written reference model is needed: the golden design is the reference.
@@ -22,6 +23,7 @@ diff.json fields:
 """
 
 import json
+import secrets
 import shutil
 import sys
 import tempfile
@@ -55,8 +57,10 @@ def rename_modules(src, suffix="__ref"):
     return "".join(out) + src[last:]
 
 
-def wrapper(golden_src, top):
-    """diff_top: same ports as `top`, inputs shared, outputs doubled as dut_* / ref_*."""
+def wrapper(golden_src, top, suffix="__ref", tag=""):
+    """diff_top: same ports as `top`, inputs shared, outputs doubled as dut_* / ref_*.
+    `suffix` is the golden copy's module suffix (rename_modules); `tag` makes the
+    instance names unguessable too."""
     ports, params = interface(golden_src)[top]
     plist = ", ".join(f"parameter {k} = {v}" for k, v in params.items())
     decl, conn_dut, conn_ref = [], [], []
@@ -75,8 +79,8 @@ def wrapper(golden_src, top):
     # Seeds may leave `default_nettype none active; the wrapper declares every net anyway.
     head = "`default_nettype wire\n" + (f"module diff_top #({plist}) (\n" if params else "module diff_top (\n")
     return (head + ",\n".join(decl) + "\n);\n"
-            f"  {top}{pov} u_dut ({', '.join(conn_dut)});\n"
-            f"  {top}__ref{pov} u_ref ({', '.join(conn_ref)});\n"
+            f"  {top}{pov} u_dut{tag} ({', '.join(conn_dut)});\n"
+            f"  {top}{suffix}{pov} u_ref{tag} ({', '.join(conn_ref)});\n"
             "endmodule\n")
 
 
@@ -101,8 +105,9 @@ def diff_check(candidate_src, golden_src, cfg_dir, timeout=120, visible=False):
     work = Path(tempfile.mkdtemp(prefix="diff_"))
     try:
         (work / "design.v").write_text(candidate_src)
-        (work / "ref.v").write_text(rename_modules(golden_src))
-        (work / "diff_top.v").write_text(wrapper(golden_src, top))
+        tag = "_" + secrets.token_hex(6)       # fresh per run: the golden copy's names can't be guessed
+        (work / "ref.v").write_text(rename_modules(golden_src, "__ref" + tag))
+        (work / "diff_top.v").write_text(wrapper(golden_src, top, "__ref" + tag, tag))
         (work / "diff_run.json").write_text(json.dumps(cfg))
         (work / "Makefile").write_text(MAKEFILE)
         for f in ("diff_test.py", "drivers.py"):

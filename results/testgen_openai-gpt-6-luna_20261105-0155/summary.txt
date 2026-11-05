@@ -1,23 +1,24 @@
 model      openai:gpt-6-luna (effort medium, prompt ts1)
 task       spec-only test suite; score = share of hidden buggy versions caught, if it passes golden
-score      64.0% mean over 39 suites
+score      64.0% mean over 39 suites (strict: 0 unless the suite passes golden)
+partial    73.8% mean (tests that fail golden dropped, the rest still count)
 outcomes   graded 26, fails_golden 11, no_answer 1, rejected 1
 cost       $0.1631 (prices in/out per 1M: $0.2 / $1.0)
 
-by seed (mean score; each suite's score; mutants)
-  alu               33.3%   0.00 RJ 1.00             40
-  apb_intc           0.0%   FG FG FG                 40
-  counter           66.7%   1.00 FG 1.00             8
-  edge_detector    100.0%   1.00 1.00 1.00           40
-  ef_tmr32           0.0%   FG FG FG                 40
-  ef_uart           33.3%   FG 0.53 0.47             40
-  fifo              66.7%   1.00 1.00 FG             40
-  priority_encoder 100.0%   1.00 1.00 1.00           30
-  pwm              100.0%   1.00 1.00 1.00           40
-  rr_arbiter       100.0%   1.00 1.00 1.00           40
-  shift_reg         66.7%   1.00 1.00 FG             40
-  traffic_light     66.7%   1.00 1.00 FG             40
-  uart_tx           99.2%   1.00 0.97 1.00           40
+by seed (strict mean; partial mean; each suite strict/partial; mutants)
+  alu               33.3%   33.3%   NA RJ 1.00/1.00                    40
+  apb_intc           0.0%   65.0%   FG/0.97 FG/0.97 FG/0.00            40
+  counter           66.7%   66.7%   1.00/1.00 FG/0.00 1.00/1.00        8
+  edge_detector    100.0%  100.0%   1.00/1.00 1.00/1.00 1.00/1.00      40
+  ef_tmr32           0.0%   43.3%   FG/0.00 FG/0.65 FG/0.65            40
+  ef_uart           33.3%   52.5%   FG/0.57 0.53/0.53 0.47/0.47        40
+  fifo              66.7%   66.7%   1.00/1.00 1.00/1.00 FG/0.00        40
+  priority_encoder 100.0%  100.0%   1.00/1.00 1.00/1.00 1.00/1.00      30
+  pwm              100.0%  100.0%   1.00/1.00 1.00/1.00 1.00/1.00      40
+  rr_arbiter       100.0%  100.0%   1.00/1.00 1.00/1.00 1.00/1.00      40
+  shift_reg         66.7%   66.7%   1.00/1.00 1.00/1.00 FG/0.00        40
+  traffic_light     66.7%   66.7%   1.00/1.00 1.00/1.00 FG/0.00        40
+  uart_tx           99.2%   99.2%   1.00/1.00 0.97/0.97 1.00/1.00      40
 
 bugs caught by label (over suites that passed golden)
   arith_flip       46/54

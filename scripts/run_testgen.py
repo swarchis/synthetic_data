@@ -316,39 +316,51 @@ def grade_suites(run_dir, config, answers, graded, todo, args):
         for n, a in enumerate(todo, 1):
             base = {k: a[k] for k in ("task_id", "seed", "task_type", "label")}
             if not a.get("code"):
-                r = {**base, "status": "no_answer", "score": 0.0, "reason": "no python code block"}
+                r = {**base, "status": "no_answer", "score": 0.0, "partial_score": 0.0, "reason": "no python code block"}
             else:
                 try:
                     r = {**base, **grade_suite(tasks / a["prompt_task"], [tasks / m for m in mutants[a["seed"]]],
                                                 a["code"], pool)}
                 except Exception as e:
-                    r = {**base, "status": "error", "score": 0.0, "reason": f"grader crashed: {type(e).__name__}: {e}"}
+                    r = {**base, "status": "error", "score": 0.0, "partial_score": 0.0,
+                         "reason": f"grader crashed: {type(e).__name__}: {e}"}
             graded[r["task_id"]] = r
             out.write(json.dumps(r) + "\n")
             out.flush()
-            print(f"  [{n}/{len(todo)}] {r['task_id']:<20} {r['status']:<12} score {r['score']:.2f}  "
+            print(f"  [{n}/{len(todo)}] {r['task_id']:<20} {r['status']:<12} score {r['score']:.2f} "
+                  f"partial {r['partial_score']:.2f}  "
                   f"{r.get('reason', '')[:100]}", flush=True)
     rows = [graded[t] for t in answers if t in graded]
     print("\n" + summarize_suites(run_dir, rows, config, answers, mutants))
 
 
+def suite_cell(r):
+    """One suite in the per-seed table: strict/partial, FG = fails golden, RJ = refused."""
+    if r["status"] in ("rejected", "no_answer", "error"):
+        return {"rejected": "RJ", "no_answer": "NA", "error": "ER"}[r["status"]]
+    strict = "FG" if r["status"] == "fails_golden" else f"{r['score']:.2f}"
+    return f"{strict}/{r['partial_score']:.2f}"
+
+
 def summarize_suites(run_dir, rows, config, answers, mutants):
     cost = sum(a.get("cost", 0) for a in answers.values())
     mean = sum(r["score"] for r in rows) / max(len(rows), 1)
+    pmean = sum(r["partial_score"] for r in rows) / max(len(rows), 1)
     lines = [f"model      {config['model']} (effort {config['effort']}, prompt {config['prompt_version']})",
              f"task       spec-only test suite; score = share of hidden buggy versions caught, if it passes golden",
-             f"score      {100 * mean:.1f}% mean over {len(rows)} suites",
+             f"score      {100 * mean:.1f}% mean over {len(rows)} suites (strict: 0 unless the suite passes golden)",
+             f"partial    {100 * pmean:.1f}% mean (tests that fail golden dropped, the rest still count)",
              f"outcomes   " + ", ".join(f"{k} {v}" for k, v in Counter(r["status"] for r in rows).most_common()),
              f"cost       ${cost:.4f} (prices in/out per 1M: ${config['price_in']} / ${config['price_out']})",
-             "", "by seed (mean score; each suite's score; mutants)"]
+             "", "by seed (strict mean; partial mean; each suite strict/partial; mutants)"]
     by_seed = defaultdict(list)
     for r in rows:
         by_seed[r["seed"]].append(r)
     for seed, rs in sorted(by_seed.items()):
-        sc = [r["score"] for r in rs]
-        each = " ".join("FG" if r["status"] == "fails_golden" else "RJ" if r["status"] == "rejected"
-                        else f"{r['score']:.2f}" for r in rs)
-        lines.append(f"  {seed:<16} {100 * sum(sc) / len(sc):5.1f}%   {each:<24} {len(mutants.get(seed, []))}")
+        sc, pc = [r["score"] for r in rs], [r["partial_score"] for r in rs]
+        each = " ".join(suite_cell(r) for r in rs)
+        lines.append(f"  {seed:<16} {100 * sum(sc) / len(sc):5.1f}%  {100 * sum(pc) / len(pc):5.1f}%   "
+                     f"{each:<34} {len(mutants.get(seed, []))}")
     labels = defaultdict(lambda: [0, 0])          # mutant label -> [caught, tried], suites that passed golden
     tasks = Path(config["tasks"])
     label_of = {}

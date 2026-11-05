@@ -9,7 +9,8 @@ Reward 1 only if both hold. A test that always fails scores 0 on step 1.
 
 Spec-only suites (grade_suite): the model sees spec.md and the module header only, and
 writes a test suite. Score = fraction of hidden buggy versions (other tasks' buggy.v)
-in which a test fails, if every test passes on golden.v (otherwise 0).
+in which a test fails, if every test passes on golden.v (otherwise 0). Partial score:
+the same, counting only the tests that pass on golden.v.
 
 Model-written code is untrusted. Three layers:
   - static check (check_source): only allowlisted imports; no file/OS/network
@@ -299,26 +300,42 @@ def observable_at_defaults(task_dir, timeout=TIMEOUT):
 
 def grade_suite(golden_dir, mutant_dirs, test_src, pool, timeout=TIMEOUT):
     """Run a spec-only suite on golden, then on every mutant (in parallel on `pool`).
-    {"status": graded | fails_golden | rejected, "score", "killed": [ids], "missed": [ids], "reason"}"""
+
+    Two scores:
+      score          strict: share of mutants caught, 0 unless every test passes on golden
+      partial_score  the tests that fail on golden are dropped; share of mutants caught by
+                     the rest (a suite with one wrong assertion still gets credit for the
+                     checks it got right)
+    {"status": graded | fails_golden | rejected, "score", "partial_score", "golden_failed",
+     "killed", "missed", "killed_partial", "reason"}"""
     golden_dir = Path(golden_dir)
     top, _, _ = _ports(golden_dir)
     if bad := check_source(test_src):
-        return {"status": "rejected", "score": 0.0, "reason": "not allowed: " + ", ".join(bad[:8])}
+        return {"status": "rejected", "score": 0.0, "partial_score": 0.0,
+                "reason": "not allowed: " + ", ".join(bad[:8])}
     g = run_test((golden_dir / "golden.v").read_text(), test_src, top, timeout)
+    out = {"tests": len(g["passed"]) + len(g["failed"]), "golden_failed": g["failed"]}
     if g["status"] != "pass":
         why = {"compile_error": "test file did not run (import or syntax error, or no tests)",
                "timeout": f"did not finish within {timeout}s"}.get(g["status"], ", ".join(g["failed"][:5]))
         detail = first_failure(g["log"])
-        return {"status": "fails_golden", "score": 0.0, "golden_failed": g["failed"],
-                "reason": f"fails on the correct design: {why}" + (f"; {detail}" if detail else "")}
-    runs = list(pool.map(lambda d: run_test((Path(d) / "buggy.v").read_text(), test_src, top, timeout)["status"],
+        out.update(status="fails_golden", score=0.0,
+                   reason=f"fails on the correct design: {why}" + (f"; {detail}" if detail else ""))
+        if not g["passed"]:                       # nothing usable left for partial credit
+            return {**out, "partial_score": 0.0}
+    runs = list(pool.map(lambda d: run_test((Path(d) / "buggy.v").read_text(), test_src, top, timeout),
                          mutant_dirs))
-    killed = [Path(d).name for d, st in zip(mutant_dirs, runs) if st == "fail"]
-    missed = [Path(d).name for d, st in zip(mutant_dirs, runs) if st != "fail"]
-    return {"status": "graded", "score": len(killed) / max(len(mutant_dirs), 1), "killed": killed, "missed": missed,
-            "tests": len(g["passed"]),
-            "reason": f"caught {len(killed)}/{len(mutant_dirs)}"
-                      + (f" ({sum(st == 'timeout' for st in runs)} timed out)" if "timeout" in runs else "")}
+    bad_tests = set(g["failed"])
+    ids = [Path(d).name for d in mutant_dirs]
+    partial = [i for i, r in zip(ids, runs) if r["status"] == "fail" and set(r["failed"]) - bad_tests]
+    out.update(partial_score=len(partial) / max(len(ids), 1), killed_partial=partial)
+    if g["status"] != "pass":
+        return out
+    killed = [i for i, r in zip(ids, runs) if r["status"] == "fail"]
+    timeouts = sum(r["status"] == "timeout" for r in runs)
+    return {**out, "status": "graded", "score": len(killed) / max(len(ids), 1), "killed": killed,
+            "missed": [i for i in ids if i not in killed],
+            "reason": f"caught {len(killed)}/{len(ids)}" + (f" ({timeouts} timed out)" if timeouts else "")}
 
 
 if __name__ == "__main__":

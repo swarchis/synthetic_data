@@ -10,17 +10,28 @@ for reward: the baseline harness and the RL environment both call grade().
 
 import json
 import re
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from inject import bracket_pairs, is_signal_name, module_spans, tokenize
+from inject import KEYWORDS, TOKEN_RE, bracket_pairs, is_signal_name, module_spans, tokenize
 from sim import run_tests
 
-# Could end the simulation early, read outside files, or touch the host.
-BANNED = {"$finish", "$stop", "$fatal", "$readmemh", "$readmemb", "$fopen",
-          "$fwrite", "$fdisplay", "$system", "`include"}
+# Could end the simulation early, read or write files, or touch the host.
+BANNED = {"$finish", "$stop", "$fatal", "$readmemh", "$readmemb", "$fopen", "$fclose",
+          "$fwrite", "$fdisplay", "$fflush", "$fscanf", "$fgets", "$fgetc", "$fread",
+          "$writememh", "$writememb", "$dumpfile", "$dumpvars", "$value$plusargs",
+          "$test$plusargs", "$system", "`include"}
+BANNED_PREFIXES = ("$finish", "$dump", "$readmem", "$writemem", "$fwrite", "$fdisplay",
+                   "$fstrobe", "$fmonitor")
+# Names the differential checker uses for the golden copy (diffcheck.py). Also randomized
+# per run there; this blocks naming them, and hierarchical references reach nothing.
+RESERVED = re.compile(r"__ref|^(diff_top|u_ref|u_dut)$")
+CONDITIONALS = {"`ifdef", "`ifndef", "`elsif", "`undef"}
+# The tokenizer without `ifdef blanking, accepting anything (macro bodies hold `` and \).
+RAW_RE = re.compile(TOKEN_RE.pattern + r"| (?P<other>``|.)", re.S | re.X)
 DIRECTIONS = {"input", "output", "inout"}
 TYPE_WORDS = {"reg", "wire", "logic", "signed", "integer"}
 
@@ -141,6 +152,72 @@ def same_ports(cp, gp, cpar, gpar):
     return True
 
 
+def raw_tokens(src):
+    """Every token, including inactive `ifdef branches and macro bodies: what the
+    simulator might see, not what inject.tokenize analyzes."""
+    out, pos = [], 0
+    while pos < len(src):
+        m = RAW_RE.match(src, pos)
+        if m.lastgroup not in ("space", "comment"):
+            out.append((m.lastgroup, m.group()))
+        pos = m.end()
+    return out
+
+
+def preprocess(src):
+    """The source as Icarus compiles it (iverilog -E): macros expanded, token pasting
+    done, `ifdef resolved with Icarus's own predefines such as __ICARUS__. None if
+    Icarus can't preprocess it."""
+    with tempfile.TemporaryDirectory() as d:
+        (Path(d) / "in.v").write_text(src)
+        try:
+            r = subprocess.run(["iverilog", "-E", "-o", "out.v", "in.v"], cwd=d, capture_output=True, timeout=20)
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        out = Path(d) / "out.v"
+        return out.read_text() if r.returncode == 0 and out.exists() else None
+
+
+def token_problems(toks):
+    """Banned tasks, the differential checker's reserved names, hierarchical references."""
+    names = [x for k, x in toks if k == "ident"]
+    if banned := sorted({x for x in names if x in BANNED or x.startswith(BANNED_PREFIXES)}):
+        return f"banned construct: {', '.join(banned)}"
+    if reserved := sorted({x for x in names if RESERVED.search(x)}):
+        return f"reserved name: {', '.join(reserved)}"
+    for i in range(1, len(toks) - 1):        # a.b or a[i].b: a hierarchical reference
+        prev, nxt = toks[i - 1], toks[i + 1]
+        after_directive = i >= 2 and (toks[i - 2][1] in CONDITIONALS or toks[i - 2][1] == "`define")
+        if toks[i][1] == "." and nxt[0] == "ident" and not after_directive and (
+                prev[1] == "]" or (prev[0] == "ident" and prev[1] not in KEYWORDS and prev[1][0] not in "$`")):
+            return f"hierarchical reference: {prev[1]}.{nxt[1]}"
+    return None
+
+
+def unsafe(golden, candidate):
+    """Reasons the candidate could game the simulator. Checked twice: on raw tokens
+    (every `ifdef branch counts) and on what Icarus will actually compile (iverilog -E:
+    catches names built by macro token pasting). Preprocessor use is limited to what
+    the golden design already does."""
+    gt, ct = raw_tokens(golden), raw_tokens(candidate)
+    if reason := token_problems(ct):
+        return reason
+    directives = lambda toks: {x for k, x in toks if x.startswith("`")}
+    if extra := sorted(directives(ct) - directives(gt)):
+        return f"preprocessor directive not in the original design: {', '.join(extra)}"
+    tested = lambda toks: {(toks[i][1], toks[i + 1][1]) for i in range(len(toks) - 1) if toks[i][1] in CONDITIONALS}
+    if extra := sorted(tested(ct) - tested(gt)):
+        return f"preprocessor condition not in the original design: {' '.join(extra[0])}"
+    if extra := sorted({x for k, x in ct if k == "other"} - {x for k, x in gt if k == "other"}):
+        return f"unsupported characters: {' '.join(extra)}"
+    expanded = preprocess(candidate)
+    if expanded is None:
+        return "could not preprocess with iverilog -E"
+    if reason := token_problems(raw_tokens(expanded)):
+        return f"after preprocessing: {reason}"
+    return None
+
+
 def check(golden, candidate):
     """Return None if the candidate is allowed, else the reason it's rejected."""
     if not candidate.strip():
@@ -152,9 +229,8 @@ def check(golden, candidate):
         return f"could not parse: {e}"
     gold = interface(golden)
 
-    banned = sorted({t.text for t in toks if t.text in BANNED})
-    if banned:
-        return f"banned construct: {', '.join(banned)}"
+    if reason := unsafe(golden, candidate):
+        return reason
     if sorted(cand) != sorted(gold):
         return f"modules {sorted(cand)}, expected {sorted(gold)}"
     for name in sorted(gold):
