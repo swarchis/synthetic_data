@@ -1,0 +1,58 @@
+grading 30 answers (0 already graded), 10 at a time
+  apb_intc: 119/120 candidate bugs show at default parameters
+  [1/30] apb_intc#5           fails_golden score 0.00 partial 0.85  fails on the correct design: register_map_and_apb_errors, priority_threshold_claim_and_complete; Ass
+  [2/30] apb_intc#6           fails_golden score 0.00 partial 0.00  fails on the correct design: apb_interrupt_controller_checks; NameError: name 'FallingingEdge' is no
+  [3/30] apb_intc#1           fails_golden score 0.00 partial 0.88  fails on the correct design: arbitration_and_claim_test; AssertionError: assert 247 == 119
+  [4/30] apb_intc#3           fails_golden score 0.00 partial 0.82  fails on the correct design: priority_claim_and_completion, pending_trigger_and_synchronizer; Assert
+  [5/30] apb_intc#2           fails_golden score 0.00 partial 0.00  fails on the correct design: apb_interrupt_controller_behavior; AssertionError: assert 0 == 1
+  [6/30] ef_tmr32#0           fails_golden score 0.00 partial 0.30  fails on the correct design: register_map_and_apb_behavior, timer_up_periodic_and_down_one_shot, int
+  [7/30] apb_intc#7           fails_golden score 0.00 partial 0.00  fails on the correct design: apb_intc_behavior; AssertionError: assert 7 == 1
+  [8/30] apb_intc#4           fails_golden score 0.00 partial 0.00  fails on the correct design: apb_interrupt_controller_checks; AssertionError: assert 470614792 == 47
+  [9/30] apb_intc#8           fails_golden score 0.00 partial 0.00  fails on the correct design: apb_intc_specification; AssertionError: irq expected 1, got 0
+  [10/30] apb_intc#9           fails_golden score 0.00 partial 0.00  fails on the correct design: apb_intc_behavior; AssertionError: assert 0 == 1
+  [11/30] ef_tmr32#2           fails_golden score 0.00 partial 0.55  fails on the correct design: register_map_and_apb_behavior; AssertionError: assert 5 == 0
+  [12/30] ef_tmr32#3           fails_golden score 0.00 partial 0.62  fails on the correct design: register_map_and_apb
+  [13/30] apb_intc#0           fails_golden score 0.00 partial 0.00  fails on the correct design: apb_intc_specification_test; AssertionError: assert 4 == 0
+  [14/30] ef_tmr32#4           fails_golden score 0.00 partial 0.00  fails on the correct design: timer_apb_pwm_and_interrupt_checks; AssertionError: reset value at 0xff
+  [15/30] ef_tmr32#5           fails_golden score 0.00 partial 0.00  fails on the correct design: test_timer_apb_pwm_and_interrupts; AssertionError: assert 7 == 0
+  [16/30] ef_tmr32#1           graded       score 0.65 partial 0.65  caught 26/40
+  [17/30] ef_uart#3            fails_golden score 0.00 partial 0.50  fails on the correct design: register_map_and_reset_values; AssertionError: assert 0 == 16136
+  [18/30] ef_tmr32#7           rejected     score 0.00 partial 0.00  not allowed: name hasattr
+  [19/30] ef_uart#0            fails_golden score 0.00 partial 0.50  fails on the correct design: apb_registers_and_interrupts; AssertionError: assert (5 & 1) == 0
+  [20/30] ef_uart#4            fails_golden score 0.00 partial 0.47  fails on the correct design: register_map_and_reset; AssertionError: assert 5 == 0
+  [21/30] ef_tmr32#6           fails_golden score 0.00 partial 0.00  fails on the correct design: register_map_and_apb, timer_modes_and_prescaler, pwm_fault_inversion_an
+  [22/30] ef_tmr32#9           fails_golden score 0.00 partial 0.00  fails on the correct design: timer_apb_pwm_and_interrupts; AssertionError: reset value at 0xff08
+  [23/30] ef_uart#1            fails_golden score 0.00 partial 0.50  fails on the correct design: interrupt_mask_clear_and_receive_timeout; AssertionError: receive timeo
+  [24/30] ef_uart#2            graded       score 0.50 partial 0.50  caught 20/40
+  [25/30] ef_uart#8            fails_golden score 0.00 partial 0.47  fails on the correct design: tx_fifo_capacity_threshold_and_flush; AssertionError: assert (5 & 2)
+  [26/30] ef_uart#7            fails_golden score 0.00 partial 0.00  fails on the correct design: uart_apb_checks; ValueError: Can't convert LogicArray to int: it contai
+  [27/30] ef_uart#9            fails_golden score 0.00 partial 0.00  fails on the correct design: uart_apb_suite; AssertionError: assert 1 == ((165 >> 1) & 1)
+  [28/30] ef_uart#6            fails_golden score 0.00 partial 0.00  fails on the correct design: uart_apb_suite; ValueError: Can't convert LogicArray to int: it contain
+  [29/30] ef_tmr32#8           fails_golden score 0.00 partial 0.00  fails on the correct design: timer_apb_pwm_suite; AssertionError: assert False
+  [30/30] ef_uart#5            fails_golden score 0.00 partial 0.00  fails on the correct design: uart_apb_suite; TypeError: apb_read() missing 1 required positional arg
+
+model      openai:gpt-6-luna (effort medium, prompt ts1)
+task       spec-only test suite; score = share of hidden buggy versions caught, if it passes golden
+score      3.8% mean over 30 suites (strict: 0 unless the suite passes golden)
+partial    25.4% mean (tests that fail golden dropped, the rest still count)
+outcomes   fails_golden 27, graded 2, rejected 1
+cost       $0.2075 (prices in/out per 1M: $0.2 / $1.0)
+
+by seed (strict mean; partial mean; each suite strict/partial; mutants)
+  apb_intc           0.0%   25.5%   FG/0.85 FG/0.00 FG/0.88 FG/0.82 FG/0.00 FG/0.00 FG/0.00 FG/0.00 FG/0.00 FG/0.00 40
+  ef_tmr32           6.5%   21.2%   FG/0.30 FG/0.55 FG/0.62 FG/0.00 FG/0.00 0.65/0.65 RJ FG/0.00 FG/0.00 FG/0.00 40
+  ef_uart            5.0%   29.5%   FG/0.50 FG/0.50 FG/0.47 FG/0.50 0.50/0.50 FG/0.47 FG/0.00 FG/0.00 FG/0.00 FG/0.00 40
+
+bugs caught by label (over suites that passed golden)
+  arith_flip       0/10
+  compare_flip     2/4
+  const_change     2/8
+  drop_not         3/5
+  invert_if        3/8
+  logic_flip       4/7
+  multi2           3/5
+  multi3           8/9
+  multi4           8/8
+  signal_swap      6/9
+  state_swap       7/7
+
