@@ -7,6 +7,10 @@ random seed and the design's default parameters:
   2. on buggy.v:  at least one must fail (the test catches the bug)
 Reward 1 only if both hold. A test that always fails scores 0 on step 1.
 
+Spec-only suites (grade_suite): the model sees spec.md and the module header only, and
+writes a test suite. Score = fraction of hidden buggy versions (other tasks' buggy.v)
+in which a test fails, if every test passes on golden.v (otherwise 0).
+
 Model-written code is untrusted. Three layers:
   - static check (check_source): only allowlisted imports; no file/OS/network
     access, no eval/exec/getattr/format, no dunder names. Refused files score 0.
@@ -29,7 +33,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from grade import interface
-from sim import result, run_once
+from sim import result, run_hand_tests, run_once
 
 TIMEOUT = 120          # seconds per run (golden or buggy)
 SEED = "12345"         # same random stimulus on golden and buggy
@@ -63,9 +67,10 @@ ALLOWED_IMPORTS = set(MODULE_API)
 # Builtins that reach files, code, or attributes by string (format() does through "{0.__class__}").
 FORBIDDEN_NAMES = {"open", "exec", "eval", "compile", "globals", "locals", "vars", "getattr", "setattr",
                    "delattr", "hasattr", "input", "breakpoint", "help", "memoryview", "exit", "quit", "format",
-                   "type", "object", "classmethod", "staticmethod", "property"}
+                   "type", "object"}
 # Attributes on any object: string formatting, and frames/code (coroutine.cr_frame.f_globals
-# reaches builtins). Names starting with "_" are refused too, except dut._log.
+# reaches builtins). Names starting with "_" are refused too, except dut._log and a test
+# class's own fields (self._x).
 FORBIDDEN_ATTRS = {"format", "format_map", "mro", "cr_frame", "gi_frame", "ag_frame", "cr_code", "gi_code",
                    "ag_code", "cr_await", "gi_yieldfrom", "f_globals", "f_locals", "f_builtins", "f_back",
                    "f_code", "tb_frame", "tb_next", "func_globals"}
@@ -116,7 +121,8 @@ def check_source(src):
                 bad += _module_use(node, modules[node.id], parents)
         elif isinstance(node, ast.Attribute):
             a = node.attr
-            if a in FORBIDDEN_ATTRS or (a.startswith("_") and a not in ALLOWED_PRIVATE):
+            own = isinstance(node.value, ast.Name) and node.value.id == "self" and not a.startswith("__")
+            if a in FORBIDDEN_ATTRS or (a.startswith("_") and a not in ALLOWED_PRIVATE and not own):
                 bad.append(f"attribute .{a}")
         elif isinstance(node, ast.arg) and node.arg.startswith("__"):
             bad.append(f"argument {node.arg}")
@@ -250,6 +256,69 @@ def grade_test(task_dir, test_src, timeout=TIMEOUT, check=True):
            "timeout": f"timed out on the buggy design (use with_timeout so a hang fails a test)",
            "compile_error": "did not run on the buggy design"}.get(b["status"], b["status"])
     return {**out, "status": "misses_bug", "reason": why}
+
+
+def header(task_dir):
+    """The top module's header (`module ... );`), comments included: the interface the
+    spec-only suite is written against, without the implementation."""
+    top, _, _ = _ports(task_dir)
+    src = (Path(task_dir) / "golden.v").read_text()
+    m = re.search(rf"^[ \t]*module\s+{re.escape(top)}\b", src, re.M)
+    depth = 0
+    for i in range(m.end(), len(src)):          # the first ';' outside #( ... ) and ( ... )
+        depth += (src[i] == "(") - (src[i] == ")")
+        if src[i] == ";" and depth == 0:
+            return src[m.start():i + 1] + "\n"
+
+
+def observable_at_defaults(task_dir, timeout=TIMEOUT):
+    """True if the bug shows at the design's default parameters. Seeds with a
+    configs.json sweep may have bugs that only show at other settings, and suites
+    run at the defaults. Checked with the seed's own tests and differential check,
+    both without the sweep."""
+    task_dir = Path(task_dir)
+    tests = task_dir / "tests"
+    if not (tests / "configs.json").exists():
+        return True
+    work = Path(tempfile.mkdtemp(prefix="obs_"))
+    try:
+        for f in tests.iterdir():
+            if f.name != "configs.json":
+                shutil.copy(f, work)
+        if (work / "Makefile").exists() and \
+                run_hand_tests(task_dir / "buggy.v", work, timeout)["status"] != "pass":
+            return True
+        if (work / "diff.json").exists():
+            from diffcheck import diff_check
+            d = diff_check((task_dir / "buggy.v").read_text(), (task_dir / "golden.v").read_text(), work, timeout)
+            return d["status"] != "pass"
+        return False
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def grade_suite(golden_dir, mutant_dirs, test_src, pool, timeout=TIMEOUT):
+    """Run a spec-only suite on golden, then on every mutant (in parallel on `pool`).
+    {"status": graded | fails_golden | rejected, "score", "killed": [ids], "missed": [ids], "reason"}"""
+    golden_dir = Path(golden_dir)
+    top, _, _ = _ports(golden_dir)
+    if bad := check_source(test_src):
+        return {"status": "rejected", "score": 0.0, "reason": "not allowed: " + ", ".join(bad[:8])}
+    g = run_test((golden_dir / "golden.v").read_text(), test_src, top, timeout)
+    if g["status"] != "pass":
+        why = {"compile_error": "test file did not run (import or syntax error, or no tests)",
+               "timeout": f"did not finish within {timeout}s"}.get(g["status"], ", ".join(g["failed"][:5]))
+        detail = first_failure(g["log"])
+        return {"status": "fails_golden", "score": 0.0, "golden_failed": g["failed"],
+                "reason": f"fails on the correct design: {why}" + (f"; {detail}" if detail else "")}
+    runs = list(pool.map(lambda d: run_test((Path(d) / "buggy.v").read_text(), test_src, top, timeout)["status"],
+                         mutant_dirs))
+    killed = [Path(d).name for d, st in zip(mutant_dirs, runs) if st == "fail"]
+    missed = [Path(d).name for d, st in zip(mutant_dirs, runs) if st != "fail"]
+    return {"status": "graded", "score": len(killed) / max(len(mutant_dirs), 1), "killed": killed, "missed": missed,
+            "tests": len(g["passed"]),
+            "reason": f"caught {len(killed)}/{len(mutant_dirs)}"
+                      + (f" ({sum(st == 'timeout' for st in runs)} timed out)" if "timeout" in runs else "")}
 
 
 if __name__ == "__main__":
