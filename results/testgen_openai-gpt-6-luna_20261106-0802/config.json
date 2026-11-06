@@ -1,0 +1,15 @@
+{
+  "model": "openai:gpt-6-luna",
+  "effort": "medium",
+  "mode": "suite",
+  "prompt_version": "ts2",
+  "started": "2026-11-06T08:02:24",
+  "tasks": "/work/tasks",
+  "seeds": "oc_spi",
+  "per_seed": 5,
+  "samples": 13,
+  "max_output": 24000,
+  "price_in": 0.2,
+  "price_out": 1.0,
+  "budget": 1.0
+}

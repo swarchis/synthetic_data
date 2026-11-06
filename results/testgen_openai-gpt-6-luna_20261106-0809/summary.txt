@@ -1,0 +1,22 @@
+model      openai:gpt-6-luna (effort medium, prompt ts2)
+task       spec-only test suite; score = share of hidden buggy versions caught, if it passes golden
+score      6.9% mean over 13 suites (strict: 0 unless the suite passes golden)
+partial    19.0% mean (tests that fail golden dropped, the rest still count)
+outcomes   fails_golden 11, rejected 1, graded 1
+cost       $0.1144 (prices in/out per 1M: $0.2 / $1.0)
+
+by seed (strict mean; partial mean; each suite strict/partial; mutants)
+  oc_spi             6.9%   19.0%   FG/0.00 FG/0.00 FG/0.35 FG/0.00 FG/0.40 FG/0.00 RJ 0.90/0.90 FG/0.45 FG/0.38 FG/0.00 FG/0.00 FG/0.00 40
+
+bugs caught by label (over suites that passed golden)
+  arith_flip       2/3
+  compare_flip     2/2
+  const_change     4/6
+  delete_stmt      5/5
+  drop_not         4/4
+  invert_if        1/1
+  logic_flip       2/2
+  multi2           1/2
+  multi3           4/4
+  multi4           6/6
+  signal_swap      5/5

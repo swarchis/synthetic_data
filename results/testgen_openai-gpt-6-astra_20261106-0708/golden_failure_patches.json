@@ -1,0 +1,62 @@
+{
+ "ef_uart#4|transmitter_formats_and_baud_controls": [
+  [
+   "await b.write(CTRL, 2 if prescale == 0 else 3)",
+   "await b.write(CTRL, 3)  # EN=1\n            await b.idle(66000)  # a counter left above a lowered PR counts up to its 16-bit wrap"
+  ]
+ ],
+ "oc_i2c#0|wishbone_registers_and_edge_semantics": [
+  [
+   "        for i in range(count):\n            expected_ack = (",
+   "        for i in range(count):\n            await Timer(1, unit='ns')  # cocotb applies writes after an await; read the inputs as driven\n            expected_ack = ("
+  ]
+ ],
+ "oc_i2c#0|master_transactions_and_interrupts": [
+  [
+   "        for i in range(count):\n            expected_ack = (",
+   "        for i in range(count):\n            await Timer(1, unit='ns')  # cocotb applies writes after an await; read the inputs as driven\n            expected_ack = ("
+  ]
+ ],
+ "oc_i2c#0|target_protocol_and_reset_domains": [
+  [
+   "        for i in range(count):\n            expected_ack = (",
+   "        for i in range(count):\n            await Timer(1, unit='ns')  # cocotb applies writes after an await; read the inputs as driven\n            expected_ack = ("
+  ]
+ ],
+ "oc_i2c#0|bus_busy_external_stretch_and_arbitration": [
+  [
+   "        for i in range(count):\n            expected_ack = (",
+   "        for i in range(count):\n            await Timer(1, unit='ns')  # cocotb applies writes after an await; read the inputs as driven\n            expected_ack = ("
+  ]
+ ],
+ "oc_i2c#4|master_transactions_interrupts_stretch_and_resets": [
+  [
+   "        await self.tick(4)\n        status = await self.read(4)\n        assert status & 3 == 1",
+   "        await self.tick(40)  # BUSY clears a few clocks after IF\n        status = await self.read(4)\n        assert status & 3 == 1"
+  ],
+  [
+   "    assert status & 0xA2 == 0\n",
+   "    assert status & 0x22 == 0  # probe: RxACK not checked\n"
+  ]
+ ],
+ "oc_i2c#4|external_bus_arbitration_and_clock_hold": [
+  [
+   "        await self.tick(4)\n        status = await self.read(4)\n        assert status & 3 == 1",
+   "        await self.tick(40)  # BUSY clears a few clocks after IF\n        status = await self.read(4)\n        assert status & 3 == 1"
+  ],
+  [
+   "    assert status & 0xA2 == 0\n",
+   "    assert status & 0x20 == 0  # probe: TIP (one-clock overlap) and RxACK not checked\n"
+  ]
+ ],
+ "oc_i2c#4|target_independent_external_master": [
+  [
+   "        await self.tick(4)\n        status = await self.read(4)\n        assert status & 3 == 1",
+   "        await self.tick(40)  # BUSY clears a few clocks after IF\n        status = await self.read(4)\n        assert status & 3 == 1"
+  ],
+  [
+   "    assert status & 0xA2 == 0\n",
+   "    assert status & 0x22 == 0  # probe: RxACK not checked\n"
+  ]
+ ]
+}

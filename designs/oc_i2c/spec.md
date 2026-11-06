@@ -55,6 +55,8 @@ Reset values: PRER = 0xFFFF, CTR = 0x00, TXR = 0x00, CR = 0x00. All 8 bits of CT
 
 **Minimum prescale: transfers need PRER ≥ 2.** With PRER = 0 or 1 the steps are faster than the master's input path (two capture flops, then the filter below). During a WRITE check step the filtered `sSDA` can still show an earlier low level after the master has released SDA, so `al_bit` rises and the command ends with AL = 1 (a false arbitration loss) instead of transferring the byte. In simulation every command tried at PRER = 0 or 1 ended this way, while PRER = 2 and up transfer normally.
 
+**With target clock stretching (stretch_en = 1), use PRER ≥ 3.** At PRER = 2, a repeated START issued while the target is still holding SCL low can go wrong: `slave_wait` sets in the same clock that `cnt` reaches 0, and the `cnt` = 0 rule wins (see "Step clock"), so the master takes its next START step and pulls SDA low while SCL is still low. No START appears on the bus; the target stays in its current state and takes the following bits as data, one bit late. In simulation this happened only at PRER = 2, when the repeated START command followed the previous byte within about 2 clocks; PRER = 3 to 9 worked at every gap tried.
+
 **CTR**: bit 7 EN (core enable), bit 6 IEN (interrupt enable). The other bits have no effect.
 
 **CR** (command): bit 7 STA (generate a START or repeated START), bit 6 STO (generate a STOP), bit 5 RD (read a byte), bit 4 WR (write a byte), bit 3 ACK (the acknowledge to send after a read: 0 = ACK, 1 = NACK), bits 2:1 reserved, bit 0 IACK (clear the interrupt flag).

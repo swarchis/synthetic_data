@@ -1,0 +1,59 @@
+{
+ "oc_aes#7|aes_functional_and_timing": [
+  [
+   "            0x2E2B34CA59FA4C883B2C8AEDA7C09B5E,\n            0x43B1CD7F598ECE23881B00E3ED030688,",
+   "            0x30C81C46A35CE411E5FBC1191A0A52EF,\n            0x43B1CD7F598ECE23881B00E3ED030688,"
+  ],
+  [
+   "            0x30C81C46A35CE411E5FBC1191A0A52EF,\n            0x7B0C785E27E8AD3F8223207104725DD4,",
+   "            0xF69F2445DF4F9B17AD2B417BE66C3710,\n            0x7B0C785E27E8AD3F8223207104725DD4,"
+  ]
+ ],
+ "oc_aes#6|aes_unit_behavior": [
+  [
+   "        assert int(dut.enc_done.value) == next_enc_done, (",
+   "        if not dut.enc_done.value.is_resolvable: return  # first edge: done has no reset\n        assert int(dut.enc_done.value) == next_enc_done, ("
+  ],
+  [
+   "    key, plaintext, ciphertext = vectors[1]\n    await bench.tick(dec_ld=1, dec_text_in=ciphertext, dec_result=plaintext)",
+   "    key, plaintext, ciphertext = vectors[1]\n    await bench.tick(dec_ld=1, dec_text_in=ciphertext, dec_result=0x945a446b27c42c5875709acfd8dcd05a)  # key loaded is vectors[0]'s"
+  ]
+ ],
+ "oc_aes#1|aes_unit_checks": [
+  [
+   "    enc_out = int(dut.enc_text_out.value)",
+   "    enc_out = (lambda v: int(v) if v.is_resolvable else -1)(dut.enc_text_out.value)  # unspecified (X) outside done"
+  ],
+  [
+   "    dec_out = int(dut.dec_text_out.value)",
+   "    dec_out = (lambda v: int(v) if v.is_resolvable else -1)(dut.dec_text_out.value)"
+  ]
+ ],
+ "oc_aes#5|aes_unit_behavior": [],
+ "oc_aes#9|aes_known_vectors_and_channel_independence": [
+  [
+   "    return int(dut.enc_text_out.value), int(dut.dec_text_out.value)",
+   "    return (lambda v: int(v) if v.is_resolvable else -1)(dut.enc_text_out.value), (lambda v: int(v) if v.is_resolvable else -1)(dut.dec_text_out.value)  # X outside done"
+  ],
+  [
+   "    for index in range(11):\n        enc_out, dec_out = await step(",
+   "    for index in range(12):  # done is visible after edge E+11: 12 steps\n        enc_out, dec_out = await step("
+  ],
+  [
+   "        for index in range(11):\n            _, dec_out = await step(",
+   "        for index in range(12):  # done after edge E+11\n            _, dec_out = await step("
+  ]
+ ],
+ "oc_aes#9|encryption_restart_uses_latest_block": [
+  [
+   "    return int(dut.enc_text_out.value), int(dut.dec_text_out.value)",
+   "    return (lambda v: int(v) if v.is_resolvable else -1)(dut.enc_text_out.value), (lambda v: int(v) if v.is_resolvable else -1)(dut.dec_text_out.value)  # X outside done"
+  ]
+ ],
+ "oc_aes#9|exact_done_timing_reset_and_overlaps": [
+  [
+   "    return int(dut.enc_text_out.value), int(dut.dec_text_out.value)",
+   "    return (lambda v: int(v) if v.is_resolvable else -1)(dut.enc_text_out.value), (lambda v: int(v) if v.is_resolvable else -1)(dut.dec_text_out.value)  # X outside done"
+  ]
+ ]
+}

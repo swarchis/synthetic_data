@@ -3,12 +3,28 @@
   [
    "    status = await issue_command(dut, 0x90)  # START + WRITE\n",
    "    await wb_write(dut, 3, 0xA0)\n    status = await issue_command(dut, 0x90)  # START + WRITE\n"
+  ],
+  [
+   "    await wb_write(dut, 4, 0x28)  # RD + NACK\n    await wait_interrupt(dut)",
+   "    await wb_write(dut, 4, 0x01)  # IACK: IF stays set until cleared\n    await wb_write(dut, 4, 0x28)  # RD + NACK\n    await wait_interrupt(dut)"
+  ],
+  [
+   "    await wait_interrupt(dut)\n\n    assert await wb_read(dut, 3) == 0xA5",
+   "    await wait_interrupt(dut)\n\n    assert await wb_read(dut, 3) == 0x00  # pointer byte 0xA0 selects 0; ptr is 1 after the data byte"
   ]
  ],
  "oc_i2c#2|i2c_sys_suite": [
   [
    "    await ClockCycles(dut.clk, 20)\n    status = await wb_read(dut, 4)\n    assert status & 0x40",
    "    await ClockCycles(dut.clk, 20000)\n    status = await wb_read(dut, 4)\n    assert status & 0x40"
+  ],
+  [
+   "run_command(dut, 0x50)  # WRITE data + STOP\n    assert (status & 0x80) == 0\n    assert (status & 0x40) == 0",
+   "run_command(dut, 0x50)  # WRITE data + STOP\n    assert (status & 0x80) == 0\n    pass  # BUSY clears a few clocks after IF (filtered STOP)"
+  ],
+  [
+   "    status = await run_command(dut, 0x68)  # READ, NACK, then STOP\n    assert (status & 0x40) == 0",
+   "    status = await run_command(dut, 0x68)  # READ, NACK, then STOP\n    pass  # BUSY clears a few clocks after IF (filtered STOP)"
   ]
  ],
  "oc_i2c#5|target_write_read_stretch_and_interrupt": [
@@ -31,6 +47,10 @@
   [
    "    assert (status & 0x40) == 0, \"BUSY remained set after the final STOP\"",
    "    pass  # BUSY clears a few clocks after IF (filtered STOP)"
+  ],
+  [
+   "    assert int(dut.wb_inta_o.value) == 1, \"Interrupt did not reflect the enabled IF flag\"",
+   "    assert int(dut.wb_inta_o.value) == 0  # CTR = 0x80: IEN is 0"
   ]
  ],
  "oc_i2c#4|i2c_sys_suite": [
@@ -41,6 +61,10 @@
   [
    "        assert (status & 0x80) == 0, \"address write should have been ACKed\"",
    "        pass  # RxACK holds the master's own NACK after a read"
+  ],
+  [
+   "    assert await wb_read(2) == 0x00\n    assert await read_target_byte(2) == 0xA6",
+   "    assert await wb_read(2) == 0x00\n    await configure_master()  # wb_rst_i cleared EN; CR writes are lost while EN = 0\n    assert await read_target_byte(2) == 0xA6"
   ]
  ],
  "oc_i2c#6|i2c_sys_suite": [
@@ -57,6 +81,22 @@
   [
    "    status = await issue_command(dut, 0x40)\n    assert (status & 0x40) == 0",
    "    status = await issue_command(dut, 0x40)\n    pass  # BUSY clears a few clocks after IF (filtered STOP)"
+  ],
+  [
+   "    await issue_command(dut, 0x90)\n    await clear_if(dut)\n    await issue_command(dut, 0x10)\n    await clear_if(dut)\n    await issue_command(dut, 0x90 | 0x01)  # Repeated START, address 0x50/write.\n    await clear_if(dut)\n    await issue_command(dut, 0x90)  # Address byte 0xA0; pointer is now 0.\n    await clear_if(dut)\n\n    # Set pointer 1 before addressing the target for reading.\n    await issue_command(dut, 0x10)\n    await clear_if(dut)\n    await issue_command(dut, 0x80 | 0x10)  # Repeated START and address byte 0xA0.\n    await clear_if(dut)\n",
+   "    await wb_write(dut, 3, 0xA0)  # commands send TXR: load it first\n    await issue_command(dut, 0x90)\n    await clear_if(dut)\n    await wb_write(dut, 3, 0x01)\n    await issue_command(dut, 0x10)\n    await clear_if(dut)\n"
+  ],
+  [
+   "    await clear_if(dut)\n    status = await issue_command(dut, 0x10)\n    assert (status & 0x80) == 0  # Target ACK.\n    await clear_if(dut)\n    status = await issue_command(dut, 0x10)",
+   "    await clear_if(dut)\n    await wb_write(dut, 3, 0x01)  # load TXR: pointer 1\n    status = await issue_command(dut, 0x10)\n    assert (status & 0x80) == 0  # Target ACK.\n    await clear_if(dut)\n    await wb_write(dut, 3, 0xA6)  # load TXR: data\n    status = await issue_command(dut, 0x10)"
+  ],
+  [
+   "    await wb_write(dut, 0, 2)\n    await wb_write(dut, 1, 0)\n    await wb_write(dut, 2, 0x80)  # Enable core.",
+   "    await wb_write(dut, 0, 3)  # GAP (spec v2): PRER = 2 with stretching mis-times a quick repeated START\n    await wb_write(dut, 1, 0)\n    await wb_write(dut, 2, 0x80)  # Enable core."
+  ],
+  [
+   "    await issue_command(dut, 0x40)\n    assert (await wb_read(dut, 4) & 0x40) == 0",
+   "    await issue_command(dut, 0x40)\n    pass  # BUSY clears a few clocks after IF (filtered STOP)"
   ]
  ],
  "oc_i2c#9|wishbone_registers_and_acknowledge": [
@@ -73,6 +113,10 @@
   [
    "    assert (status & 0x01) == 1\n    assert (status & 0x40) == 0",
    "    assert (status & 0x01) == 1\n    pass  # BUSY clears a few clocks after IF (filtered STOP)"
+  ],
+  [
+   "    pass  # BUSY clears a few clocks after IF (filtered STOP)\n    assert await wb_read(dut, 3) == 0xA6",
+   "    pass  # BUSY clears a few clocks after IF (filtered STOP)\n    assert await wb_read(dut, 3) == 0x00  # ptr moved to 2 after writing register 1"
   ]
  ],
  "oc_i2c#11|wishbone_registers_and_resets": [
@@ -83,6 +127,10 @@
   [
    "    await wb_write(dut, 4, 0x08)\n    assert await wb_read(dut, 4) == 0x08",
    "    await wb_write(dut, 4, 0x08)\n    assert await wb_read(dut, 6) == 0x08"
+  ],
+  [
+   "async def wb_reset(dut):\n    dut.wb_rst_i.value = 1",
+   "async def wb_reset(dut):\n    await FallingEdge(dut.clk)\n    dut.wb_rst_i.value = 1"
   ]
  ],
  "oc_i2c#11|bus_busy_and_external_open_drain": [
@@ -103,6 +151,10 @@
   [
    "    status = await command_and_wait(dut, 0x68)\n    assert (status & 0x40) == 0",
    "    status = await command_and_wait(dut, 0x68)\n    pass  # BUSY clears a few clocks after IF (filtered STOP)"
+  ],
+  [
+   "    status = await command_and_wait(dut, 0xB0)",
+   "    status = await command_and_wait(dut, 0x90)  # 0xB0 sets RD too, and RD wins"
   ]
  ],
  "oc_i2c#12|wishbone_registers_and_resets": [
@@ -119,6 +171,14 @@
   [
    "  # ptr moved to 3 after the write\n    status = await wb_read(dut, 4)\n    assert status & 0xE3 == 0x41",
    "  # ptr moved to 3 after the write\n    status = await wb_read(dut, 4)\n    assert status & 0xE3 == 0xC1  # RxACK = own NACK"
+  ],
+  [
+   "  # RxACK = own NACK\n    await clear_interrupt(dut)\n\n    await issue_command(dut, 0x40)\n    status = await wb_read(dut, 4)\n    assert status & 0xE3 == 0x01",
+   "  # RxACK = own NACK\n    await clear_interrupt(dut)\n\n    await issue_command(dut, 0x40)\n    status = await wb_read(dut, 4)\n    assert status & 0xE3 == 0x81  # RxACK holds the last received ACK bit"
+  ],
+  [
+   "    await clear_interrupt(dut)\n    await issue_command(dut, 0x40)\n    status = await wb_read(dut, 4)\n    assert status & 0xE3 == 0x01",
+   "    await clear_interrupt(dut)\n    await issue_command(dut, 0x40)\n    status = await wb_read(dut, 4)\n    assert status & 0xE3 == 0x81  # RxACK holds the NACK of address 0xA2"
   ]
  ]
 }

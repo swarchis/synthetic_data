@@ -152,7 +152,7 @@ class WishboneDriver:
     "p_sequence": 0.05, "sequences": [{"weight": 1, "steps": [[3, 160], ["idle", 300], [4, "R"]]}]}.
     Idle cycles drop CYC or STB (never both high) with junk on the other signals.
     A sequence is a script played from start to end when chosen: [adr, data] is a write
-    (data "R" = a random byte), ["idle", n] is n idle cycles. Sequences let the stimulus
+    (data "R" = a random byte), ["read", adr] is a read, ["idle", n] is n idle cycles. Sequences let the stimulus
     form whole protocol transactions that random traffic would almost never produce."""
 
     def __init__(self, rule, rng):
@@ -219,6 +219,10 @@ class WishboneDriver:
             if a == "idle":
                 self.idle_left = d - 1
                 return self._idle()
+            if a == "read":          # ["read", adr]: a read transfer
+                self.cur = {"WE": 0, "ADR": d, "DAT": self.rng.getrandbits(self.width)}
+                self.left = 1
+                return {n["CYC"]: 1, n["STB"]: 1, **{n[k]: v for k, v in self.cur.items()}}
             self.cur = {"WE": 1, "ADR": a, "DAT": self.rng.getrandbits(self.width) if d == "R" else d}
             self.left = 1
             return {n["CYC"]: 1, n["STB"]: 1, **{n[k]: v for k, v in self.cur.items()}}

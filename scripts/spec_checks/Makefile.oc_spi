@@ -1,0 +1,7 @@
+SIM ?= icarus
+TOPLEVEL_LANG = verilog
+VERILOG_SOURCES = $(CURDIR)/../../designs/oc_spi/simple_spi_top.v
+TOPLEVEL = simple_spi_top
+COCOTB_TEST_MODULES = test_oc_spi_spec
+SIM_BUILD = /tmp/sim_build_oc_spi_spec
+include $(shell cocotb-config --makefiles)/Makefile.sim

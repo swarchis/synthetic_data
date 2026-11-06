@@ -1,0 +1,21 @@
+{
+  "name": "oc_spi",
+  "description": "OpenCores simple_spi (Richard Herveille): MC68HC11E-style SPI master with Wishbone interface, 4-entry read and write FIFOs, programmable clock divider, all four SPI modes and a transfer-count interrupt",
+  "source": "https://github.com/freecores/simple_spi @ 61c39a5 (rtl/verilog: fifo4.v, simple_spi_top.v)",
+  "license": "Richard Herveille's permissive notice (use and distribution without restriction, notice kept; see NOTICE.md)",
+  "created": "2026-11-05",
+  "kind": "multi_module",
+  "top": "simple_spi_top",
+  "build": {
+    "presample_per_op": 25,
+    "multi_k": [
+      2,
+      3,
+      4
+    ],
+    "multi_per_k": 10,
+    "multi_cross_module": true,
+    "holes_per_kind": 4,
+    "timeout": 150
+  }
+}

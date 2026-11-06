@@ -1,0 +1,21 @@
+{
+  "name": "oc_aes",
+  "description": "OpenCores AES core (Rudolf Usselmann): AES-128 encryptor and decryptor, one round per clock, on-the-fly key expansion for encryption and a precomputed round-key buffer for decryption, with an in-house two-channel top",
+  "source": "https://github.com/freecores/aes_core @ 0d81d6e (rtl/verilog) + in-house aes_unit top",
+  "license": "Rudolf Usselmann's permissive notice (use and distribution without restriction, notice kept; see NOTICE.md). In-house top: owned by rtl-env founders.",
+  "created": "2026-11-05",
+  "kind": "multi_module",
+  "top": "aes_unit",
+  "build": {
+    "presample_per_op": 25,
+    "multi_k": [
+      2,
+      3,
+      4
+    ],
+    "multi_per_k": 10,
+    "multi_cross_module": true,
+    "holes_per_kind": 4,
+    "timeout": 150
+  }
+}

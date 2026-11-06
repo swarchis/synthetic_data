@@ -1,0 +1,14 @@
+{
+ "oc_aes#1|aes_channels": [
+  [
+   "    await b.tick(rst=0, first=True)\n    await b.tick(rst=0)",
+   "    await b.tick(rst=0, first=True)\n    await b.tick(rst=0, first=True)  # done is X until 2 edges have passed (no reset)"
+  ]
+ ],
+ "oc_aes#9|aes_channels": [
+  [
+   "    await b.tick(rst=0, check=False)\n    await b.tick(rst=0)",
+   "    await b.tick(rst=0, check=False)\n    await b.tick(rst=0, check=False)  # done is X until 2 edges have passed"
+  ]
+ ]
+}

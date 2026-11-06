@@ -69,3 +69,94 @@ covers) but were not chased to the end; they stack many mistakes. Mistakes seen:
 - enabled the core with PRER = 0xFFFF, so the filter counter loaded 0x3FFF and stalled BUSY (#2)
 - a Wishbone write helper that drops WE before the write edge (#9); CR with RD and WR both set (#11);
   IEN left 0 but expected the interrupt (#0); cocotb writes during ReadOnly (#11)
+
+## GPT-6 Astra on the two hardest designs (results/testgen_openai-gpt-6-astra_20261106-0708), 2026-11-05
+
+5 suites each on ef_uart and oc_i2c (spec v2), $4.73 at list price. **UART 70.0% strict / 86.5% partial,
+I2C 53.5% / 55.5%; overall 61.7% / 71.2%.** (Terra on the same designs: 12.1% and 40.0% strict.)
+3 suites failed on golden (8 tests); all 8 pass to the end after patching, **0 spec gaps**:
+- UART: lowered PR from 3 to 0 while the baud counter sat above 0. The spec: the counter "returns to 0
+  after reaching PR, otherwise increments", so it counts up to its 16-bit wrap with no ticks (this is the
+  quirk the UART spec already implies; confirmed by a probe of the failing loop iteration).
+- I2C #0: read its own inputs in the same step it wrote them (cocotb applies writes after an await),
+  first as Z, then as stale values in its Wishbone ACK model. Testbench mechanics, not the spec.
+- I2C #4: BUSY checked 4 clocks after IF following a STOP (BUSY lags `done`); TIP checked in its one-clock
+  overlap with IF; and expected the target to ACK after holding SCL low before a START. The spec's
+  `slave_wait` sets only "when the master has just released SCL"; before a START SCL is already released,
+  so the master drives SDA low while SCL is still held low, no START appears, and the target NACKs
+  (shown by a target-state trace).
+
+### Follow-up (same day): all remaining Luna tests run to the end, and a second, narrow spec gap
+
+All 15 of Luna's failing tests now pass to the end after patching. One of them (#10) exposed a second gap,
+and spec v2's own fix invited it: v2 said "transfers need PRER ≥ 2", Luna used exactly PRER = 2 with clock
+stretching, and at PRER = 2 a repeated START issued within about 2 clocks of the previous byte, while the
+target still holds SCL low, is generated with SDA falling while SCL is low. `slave_wait` sets in the same
+clock `cnt` reaches 0, and the `cnt` = 0 rule wins. The target misses the START and shifts the address in
+one bit late (shown by a master/target trace, then a sweep: PRER 2, gaps 0-2 fail; PRER 3-9, gaps 0-29
+pass; no stretching passes everywhere). Fix (spec v3): with stretch_en = 1, use PRER ≥ 3.
+**No reported score changes:** suite #10 also failed golden through its own verified mistakes (commands
+sent without loading TXR, BUSY checked at IF), and no other suite in any I2C run hit this case.
+The reported runs used spec v2; the tasks now carry v3.
+
+## oc_aes (new design), 2026-11-06
+
+Spec checked before any model run by an independent cycle model (scripts/spec_checks/test_oc_aes_spec.py),
+which caught one draft error (decrypt restart rule), fixed before release.
+
+Terra (results/testgen_openai-gpt-6.1-terra_20261106-0750): **84.6% strict**; 11 of 13 suites passed golden
+and each caught all 40 hidden bugs. 2 suites failed golden (2 tests): both pass to the end after patching,
+**0 spec gaps**. Both checked `done` after only one reset edge; the spec says done has no reset and is
+computed from the counter value before each edge, so it is X until two edges have passed.
+
+Luna (results/testgen_openai-gpt-6-luna_20261106-0753): **46.2% strict**; 6 passed, 5 failed golden, 2 were
+refused by the grader (they used `getattr`, which the prompt bans). Of the 7 failing tests, 6 pass to the end
+after patching and 1 fails on its own Python AES before touching the design (its implementation gives the
+wrong FIPS-197 ciphertext). **0 spec gaps.** Mistakes: misremembered NIST SP 800-38A vectors (a garbled
+plaintext, a shifted pair); decrypted a block with another vector's key loaded; read the text outputs as
+integers while X (unspecified outside the done clock); expected done one clock early (twice in one suite);
+checked done at the very first edge.
+
+## oc_spi (new design), 2026-11-06
+
+Spec checked before release by an independent cycle model (scripts/spec_checks/test_oc_spi_spec.py; 0
+mismatches on 299,975 values). The model cannot catch ambiguous wording, and Terra found one:
+
+- **Spec v1 runs** (Terra results/testgen_openai-gpt-6.1-terra_20261106-0759: 76.9% strict; Luna
+  ...-luna_20261106-0802, not graded): Terra suite #6 failed golden only because the spec did not say that
+  a FIFO write on an edge where SPE = 0 still stores its byte (Terra's model skipped the store). With only
+  that line fixed in Terra's model, its whole test passes to the end. **Spec gap, fixed**; both runs redone.
+- **Spec v2 runs (reported).** Terra (...-terra_20261106-0807): **100% strict**, 13 of 13 suites pass golden
+  and each catches all 40 hidden bugs. Luna (...-luna_20261106-0809): **6.9% strict**; 11 suites failed
+  golden (21 tests), 1 refused (private attributes `_rrp`, `_rwp`). Verified: 6 tests pass to the end after
+  patching (5 only converted X to int: the FIFO storage is never cleared, so SPDR reads and MOSI in IDLE are X
+  until written; 1 also wrote 0x54 for "CPOL = 1", which sets CPHA). **Not verified to the end:** the other
+  15 tests; their first remaining failures are Luna's own bookkeeping (status values that contradict its
+  comments, a FIFO it expects to stay full after an overwriting write, clock edges off by one). No spec gap
+  was seen in them, but they were not run to the end.
+
+## oc_fpu (new design), 2026-11-06: a spec gap found by Terra, runs superseded
+
+Before release the spec passed its cycle-model check (681,494 values) and a handful of targeted probes.
+The first runs (Terra results/testgen_openai-gpt-6.1-terra_20261106-1019: 0% strict, all 13 suites failed
+golden; Luna ...-luna_20261106-1021: 13.5%) showed it was still wrong. Terra's suites aim straight at
+boundary cases that random traffic rarely makes, and most of them failed on the underflow flag of
+multiply/divide results near the smallest normal number. A structured boundary sweep (144,988 operations:
+every pair from powers of two, their neighbors one unit up and down, extremes and subnormals, all ops and
+modes) confirmed **the spec was wrong** there: for multiply and divide results that are zero, subnormal or
+±2^-126, the design's rounding (exact results one unit too large, ties away from zero, the 2^-150 case
+both ways) and its underflow flag (missing for some tiny inexact quotients, raised for a product slightly
+above 2^-126) do not follow any simple rule. Terra was right on those checks (including one I had first
+counted as its mistake: a product slightly above 2^-126 is not tiny, before or after rounding).
+**Fix (spec v2):** for multiply/divide of finite nonzero operands with such results, `out`, `zero` and
+`underflow` are not specified (deviation 2); the checker masks them there. Validated on 202,004 recorded
+operations (0 violations) and by the cycle model (656,195 values, 0 mismatches). Tasks were rebuilt and
+both models re-run on spec v2; those are the reported runs.
+
+Reported runs on spec v2: Terra (results/testgen_openai-gpt-6.1-terra_20261106-1040) **86.5% strict**, 12 of
+13 suites pass golden; the 13th crashes in its own Python reference model (`pack()` called with 9 arguments,
+defined with 7 or 8): Terra's mistake. Luna (...-luna_20261106-1042) **0% strict**: 9 suites refused by the
+grader (`getattr`, `.format`), 4 failed golden, each at its first failure on a check that contradicts an
+explicit spec sentence: underflow expected from an exact-zero add (spec: add/subtract never underflow);
+(+0) × (-0) expected +0 (spec: sign is the XOR, -0); qnan expected 0 for qNaN + qNaN (spec: qnan means the
+result is a NaN); and a check of a tiny divide result the spec leaves unspecified. These 4 were not run to the end.

@@ -1,0 +1,24 @@
+model      openai:gpt-6-astra (effort medium, prompt ts2)
+task       spec-only test suite; score = share of hidden buggy versions caught, if it passes golden
+score      61.7% mean over 10 suites (strict: 0 unless the suite passes golden)
+partial    71.2% mean (tests that fail golden dropped, the rest still count)
+outcomes   graded 7, fails_golden 3
+cost       $9.4585 (prices in/out per 1M: $20.0 / $100.0)
+
+by seed (strict mean; partial mean; each suite strict/partial; mutants)
+  ef_uart           70.0%   86.5%   0.90/0.90 0.82/0.82 FG/0.82 0.90/0.90 0.88/0.88 40
+  oc_i2c            53.5%   56.0%   0.90/0.90 FG/0.00 0.88/0.88 FG/0.12 0.90/0.90 40
+
+bugs caught by label (over suites that passed golden)
+  arith_flip       21/28
+  compare_flip     20/23
+  const_change     21/29
+  delete_stmt      15/18
+  drop_not         23/24
+  invert_if        35/36
+  logic_flip       19/19
+  multi2           10/10
+  multi3           21/21
+  multi4           24/24
+  signal_swap      26/36
+  state_swap       12/12

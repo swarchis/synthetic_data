@@ -143,8 +143,8 @@ footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--ru
     <h1>Training environments for chip-verification agents</h1>
     <p class="lede">We build tasks from real Verilog designs where a simulator, not a judge model, decides the score. Our newest task is the core of a verification engineer's job: read the spec and write the tests that catch the bugs. Current frontier models are far from solving it.</p>
     <div class="headline-stat">
-      <div class="big"><span class="to">64.3%</span><span class="vs">vs</span><span class="from">11.2%</span></div>
-      <p class="cap">of hidden bugs caught by test suites that GPT-6.1 Terra and GPT-6 Luna wrote from the spec alone, on five realistic designs. A suite counts only if every one of its checks passes on the correct design. On the UART, Terra scores 12%; on the I2C master, 40%.</p>
+      <div class="big"><span class="to">74.1%</span><span class="vs">vs</span><span class="from">13.6%</span></div>
+      <p class="cap">of hidden bugs caught by test suites that GPT-6.1 Terra and GPT-6 Luna wrote from the spec alone, on eight realistic designs. A suite counts only if every one of its checks passes on the correct design. On the UART, Terra scores 12%; on the I2C master, 40%. GPT-6 Astra, the strongest model we tried, scores 70% and 54% on those two.</p>
     </div>
   </header>
 
@@ -155,7 +155,7 @@ footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--ru
       <p><strong>The task.</strong> The model gets the specification and the module's port list. It never sees an implementation. It writes a cocotb test suite. We run that suite on the correct design and on 40 hidden buggy versions per design.</p>
       <p><strong>Two scores.</strong> <em>Strict</em> is the share of buggy versions the suite catches, and it is 0 if any check fails on the correct design, the way a real suite with a false alarm is unusable. <em>Partial</em> drops the checks that fail on the correct design and counts what the rest catch. It measures coverage.</p>
     </div>
-    <div class="chart" role="img" aria-label="Bar chart of test-suite scores, 13 suites per model per design. Interrupt controller: Luna strict 0%, partial 35%; Terra strict 92%, partial 92%. Timer: Luna strict 5%, partial 26%; Terra strict 78%, partial 91%. UART: Luna strict 12%, partial 35%; Terra strict 12%, partial 69%. GPIO: Luna strict 24%, partial 31%; Terra strict 100%, partial 100%. I2C master: Luna strict 16%, partial 21%; Terra strict 40%, partial 70%. All five designs: Luna strict 11.2%, partial 29.5%; Terra strict 64.3%, partial 84.3%.">
+    <div class="chart" role="img" aria-label="Bar chart of test-suite scores, 13 suites per model per design. Interrupt controller: Luna strict 0%, partial 35%; Terra strict 92%, partial 92%. Timer: Luna strict 5%, partial 26%; Terra strict 78%, partial 91%. UART: Luna strict 12%, partial 35%; Terra strict 12%, partial 69%. GPIO: Luna strict 24%, partial 31%; Terra strict 100%, partial 100%. I2C master: Luna strict 16%, partial 21%; Terra strict 40%, partial 70%. SPI controller: Luna strict 7%, partial 19%; Terra strict 100%, partial 100%. AES-128 unit: Luna strict 46%, partial 46%; Terra strict 85%, partial 85%. Floating-point unit: Luna strict 0%, partial 0%; Terra strict 87%, partial 87%. All eight designs: Luna strict 13.6%, partial 26.6%; Terra strict 74.1%, partial 86.6%.">
       <div class="legend">
         <span><i class="swatch" style="background:var(--accent)"></i>Strict: suite must pass the correct design</span>
         <span><i class="swatch" style="background:color-mix(in srgb, var(--accent) 28%, transparent)"></i>Partial: coverage of the checks that are right</span>
@@ -195,18 +195,39 @@ footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--ru
           <div class="m terra"><span class="who">Terra</span><div class="track"><i class="partial" style="width:69.6%"></i><i class="strict" style="width:40%"></i></div><span class="vals">40% <em>· 70%</em></span></div>
         </div>
       </div>
-      <div class="design total">
-        <div class="label">All five designs<small>65 suites per model</small></div>
+      <div class="design">
+        <div class="label">SPI controller<small>OpenCores IP, Wishbone, 4-entry FIFOs</small></div>
         <div class="models">
-          <div class="m luna"><span class="who">Luna</span><div class="track"><i class="partial" style="width:29.5%"></i><i class="strict" style="width:11.2%"></i></div><span class="vals">11.2% <em>· 30%</em></span></div>
-          <div class="m terra"><span class="who">Terra</span><div class="track"><i class="partial" style="width:84.3%"></i><i class="strict" style="width:64.3%"></i></div><span class="vals">64.3% <em>· 84%</em></span></div>
+          <div class="m luna"><span class="who">Luna</span><div class="track"><i class="partial" style="width:19.0%"></i><i class="strict" style="width:6.9%"></i></div><span class="vals">7% <em>· 19%</em></span></div>
+          <div class="m terra"><span class="who">Terra</span><div class="track"><i class="partial" style="width:100%"></i><i class="strict" style="width:100%"></i></div><span class="vals">100% <em>· 100%</em></span></div>
+        </div>
+      </div>
+      <div class="design">
+        <div class="label">AES-128 unit<small>OpenCores IP, encrypt and decrypt</small></div>
+        <div class="models">
+          <div class="m luna"><span class="who">Luna</span><div class="track"><i class="partial" style="width:46.2%"></i><i class="strict" style="width:46.2%"></i></div><span class="vals">46% <em>· 46%</em></span></div>
+          <div class="m terra"><span class="who">Terra</span><div class="track"><i class="partial" style="width:84.6%"></i><i class="strict" style="width:84.6%"></i></div><span class="vals">85% <em>· 85%</em></span></div>
+        </div>
+      </div>
+      <div class="design">
+        <div class="label">Floating-point unit<small>OpenCores IP, IEEE 754 single precision</small></div>
+        <div class="models">
+          <div class="m luna"><span class="who">Luna</span><div class="track"><i class="partial" style="width:0%"></i><i class="strict" style="width:0%"></i></div><span class="vals">0% <em>· 0%</em></span></div>
+          <div class="m terra"><span class="who">Terra</span><div class="track"><i class="partial" style="width:86.5%"></i><i class="strict" style="width:86.5%"></i></div><span class="vals">86% <em>· 86%</em></span></div>
+        </div>
+      </div>
+      <div class="design total">
+        <div class="label">All eight designs<small>104 suites per model</small></div>
+        <div class="models">
+          <div class="m luna"><span class="who">Luna</span><div class="track"><i class="partial" style="width:26.6%"></i><i class="strict" style="width:13.6%"></i></div><span class="vals">13.6% <em>· 27%</em></span></div>
+          <div class="m terra"><span class="who">Terra</span><div class="track"><i class="partial" style="width:86.6%"></i><i class="strict" style="width:74.1%"></i></div><span class="vals">74.1% <em>· 87%</em></span></div>
         </div>
       </div>
       <div class="axis"><div></div><div class="ticks"><span></span><div><span>0%</span><span>50%</span><span>100%</span></div><span>strict · partial</span></div></div>
     </div>
     <div class="prose" style="display:grid;gap:12px">
-      <p><strong>The gap between models is real.</strong> With 65 suites per model, the 95% confidence interval for Terra's strict score is 53% to 75% and for Luna's is 6% to 18%. The task separates models, and the best one tested is far from done.</p>
-      <p><strong>The UART is hard for everyone.</strong> Only 2 of Terra's 13 UART suites passed the correct design. Its coverage is good (69%), but nearly every suite carried at least one wrong check. The I2C master is next: 7 of Terra's 13 suites failed the correct design, 6 of them on the same one-clock detail.</p>
+      <p><strong>The gap between models is real.</strong> With 104 suites per model, the 95% confidence interval for Terra's strict score is 66% to 82% and for Luna's is 8% to 20%. The task separates models. On the two hardest designs we also ran GPT-6 Astra (5 suites each): 70% on the UART and 54% on the I2C master, far ahead of Terra but still short of solving them.</p>
+      <p><strong>The UART is hard for everyone.</strong> Only 2 of Terra's 13 UART suites passed the correct design. Its coverage is good (69%), but nearly every suite carried at least one wrong check. The I2C master is next: 7 of Terra's 13 suites failed the correct design, 6 of them on the same one-clock detail. The SPI controller is the other extreme: every Terra suite passed and caught every hidden bug, so it now separates weaker models only.</p>
       <p><strong>Small designs are not counted.</strong> On our 10 small designs, suites that ran caught nearly every bug. They are too easy to say anything about frontier models.</p>
       <p><strong>Cost.</strong> About 3 to 4 cents per Terra suite at list price. Grading runs locally and is free.</p>
     </div>
@@ -227,12 +248,13 @@ footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--ru
     <div class="eyebrow">Every failure checked</div>
     <h2>We proved each failure was the model's fault</h2>
     <div class="prose" style="display:grid;gap:12px">
-      <p>A failure only means something if our spec and our reference design are right. So for every suite on the five realistic designs that failed on the correct design, we found each failing check, worked out the correct value from the spec text alone, put that value into the test, and reran the test to the end in simulation. Where the cause was timing, we read the reference design's internal state to confirm it followed the spec rule cycle by cycle.</p>
+      <p>A failure only means something if our spec and our reference design are right. So for every suite on the eight realistic designs that failed on the correct design, we found each failing check, worked out the correct value from the spec text alone, put that value into the test, and reran the test to the end in simulation. Where the cause was timing, we read the reference design's internal state to confirm it followed the spec rule cycle by cycle.</p>
     </div>
     <div class="facts">
-      <div class="fact"><span class="v">94</span><span class="k">failing tests in 73 suites, each traced to a specific model mistake and a specific line of the spec, then rerun to the end</span></div>
-      <div class="fact"><span class="v">9</span><span class="k">more failing tests (Luna, I2C) each patched past 2 to 3 such mistakes in simulation, not yet run to the end</span></div>
-      <div class="fact"><span class="v">1</span><span class="k">spec gap found on the new designs: the I2C master fails at its two fastest bus settings. We fixed the spec and reran both models</span></div>
+      <div class="fact"><span class="v">127</span><span class="k">failing tests, each traced to a specific model mistake and a specific line of the spec, then rerun to the end</span></div>
+      <div class="fact"><span class="v">19</span><span class="k">more failing tests (Luna, SPI and FPU) checked at their first mistake only, not yet run to the end</span></div>
+      <div class="fact"><span class="v">4</span><span class="k">spec gaps that model failures exposed on the new designs (I2C bus speed limits, an SPI FIFO detail, tiny floating-point results). Each was fixed and the models rerun</span></div>
+      <div class="fact"><span class="v">2</span><span class="k">more spec errors caught before any model saw them, by a model of the spec run against the design every clock</span></div>
     </div>
     <p class="callout prose">We had found 12 more gaps in earlier rounds, on the UART (11) and timer (1). On our hardest design, many failures that looked like "the model can't do this" were really "our spec didn't say this." We fixed those before measuring. Most dataset builders never find them, and they end up in training data.</p>
   </section>
@@ -251,7 +273,7 @@ footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--ru
     <div class="eyebrow">How a task is made</div>
     <h2>Start from a design that works, break it, keep only breaks we can catch</h2>
     <div class="steps">
-      <div class="step"><span class="n">step 1</span><h3>A working design</h3><p>A correct Verilog design with a written spec. 11 are written in-house; 4 are open-source IP (three efabless cores, Apache-2.0, and the OpenCores I2C master), credited.</p></div>
+      <div class="step"><span class="n">step 1</span><h3>A working design</h3><p>A correct Verilog design with a written spec. 11 are written in-house; 7 are open-source IP (three efabless cores, Apache-2.0, and four OpenCores cores: I2C, SPI, AES and a floating-point unit), credited.</p></div>
       <div class="step"><span class="n">step 2</span><h3>Break it automatically</h3><p>Our injector makes realistic edits: a flipped comparison, a wrong constant, a swapped signal, a dropped condition, a register read one cycle early.</p></div>
       <div class="step"><span class="n">step 3</span><h3>Keep only catchable bugs</h3><p>Each broken version is simulated. If our checks can't tell it from the original, it is thrown away, so every bug is real and detectable.</p></div>
       <div class="step"><span class="n">step 4</span><h3>Grade by simulation</h3><p>A fix must pass hidden checks, including a side-by-side run against the original over thousands of random cycles. A test suite must pass the original and fail the broken versions.</p></div>
@@ -291,15 +313,15 @@ footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--ru
 
   <section>
     <div class="eyebrow">What's in the set today</div>
-    <h2>15 designs, four kinds of task</h2>
+    <h2>18 designs, four kinds of task</h2>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Task</th><th>What the model does</th><th>Count</th></tr></thead>
         <tbody>
-          <tr><td>Spec-only test suite</td><td>Write tests from the spec alone; scored on 40 hidden buggy versions per design</td><td class="num">15 designs</td></tr>
-          <tr><td>Bug-catching test</td><td>Write a test that fails on the given buggy design and passes on the correct one</td><td class="num">1,090</td></tr>
-          <tr><td>Bug fix</td><td>Find and fix one bug, or 2 to 5 bugs across modules</td><td class="num">1,090</td></tr>
-          <tr><td>Complete or write</td><td>Write removed logic, or a whole design from its spec</td><td class="num">181</td></tr>
+          <tr><td>Spec-only test suite</td><td>Write tests from the spec alone; scored on 40 hidden buggy versions per design</td><td class="num">18 designs</td></tr>
+          <tr><td>Bug-catching test</td><td>Write a test that fails on the given buggy design and passes on the correct one</td><td class="num">1,370</td></tr>
+          <tr><td>Bug fix</td><td>Find and fix one bug, or 2 to 5 bugs across modules</td><td class="num">1,370</td></tr>
+          <tr><td>Complete or write</td><td>Write removed logic, or a whole design from its spec</td><td class="num">250</td></tr>
         </tbody>
       </table>
     </div>
@@ -313,10 +335,10 @@ footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--ru
     <div class="eyebrow">What we haven't shown yet</div>
     <h2>Open questions, stated plainly</h2>
     <ul class="plain prose">
-      <li><strong>More hard designs.</strong> The verification results rest on 5 realistic designs. We are adding more of similar size.</li>
+      <li><strong>More hard designs.</strong> The verification results rest on 8 realistic designs. Two of them (GPIO, SPI) no longer challenge Terra; the hardest are the UART and I2C master. We are adding more of similar size.</li>
       <li><strong>Training transfer.</strong> We have not yet trained a model on these tasks and measured it on an outside benchmark. That is the next proof point.</li>
       <li><strong>Reward design.</strong> The strict score is the honest measure but gives sparse reward. The partial score rewards coverage but, used alone as a reward, would not punish wrong checks. A training reward needs both.</li>
-      <li><strong>Top model.</strong> We have not yet run GPT-6 Astra on the test-writing tasks.</li>
+      <li><strong>Top model.</strong> GPT-6 Astra has run only on the two hardest designs, 5 suites each, so its numbers are rough.</li>
     </ul>
   </section>
 
@@ -330,7 +352,7 @@ footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--ru
     </ul>
   </section>
 
-  <footer>rtl-env · Swarchis Kulkarni and Noel Thomas · Test-writing results from runs on 5 November 2026, 65 suites per model (the GPIO and I2C runs used a revision of the prompt that lists the same rules more explicitly). Bug-fix and CVDP results from 26 October 2026; agent pilot from 10 October 2026. Simulator: Icarus Verilog 12 with cocotb 2.1.</footer>
+  <footer>rtl-env · Swarchis Kulkarni and Noel Thomas · Test-writing results from runs on 5 and 6 November 2026, 104 suites per model (runs on the five newest designs used a revision of the prompt that lists the same rules more explicitly). Bug-fix and CVDP results from 26 October 2026; agent pilot from 10 October 2026. Simulator: Icarus Verilog 12 with cocotb 2.1.</footer>
 </div>
 </body>
 </html>

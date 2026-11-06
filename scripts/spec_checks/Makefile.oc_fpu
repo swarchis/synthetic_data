@@ -1,0 +1,7 @@
+SIM ?= icarus
+TOPLEVEL_LANG = verilog
+VERILOG_SOURCES = $(CURDIR)/../../designs/oc_fpu/fpu.v
+TOPLEVEL = fpu
+COCOTB_TEST_MODULES = test_oc_fpu_spec
+SIM_BUILD = /tmp/sim_build_oc_fpu_spec
+include $(shell cocotb-config --makefiles)/Makefile.sim

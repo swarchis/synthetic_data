@@ -1,0 +1,15 @@
+{
+  "model": "openai:gpt-6-astra",
+  "effort": "medium",
+  "mode": "suite",
+  "prompt_version": "ts2",
+  "started": "2026-11-06T07:08:52",
+  "tasks": "/work/tasks",
+  "seeds": "ef_uart,oc_i2c",
+  "per_seed": 5,
+  "samples": 5,
+  "max_output": 24000,
+  "price_in": 20.0,
+  "price_out": 100.0,
+  "budget": 15.0
+}

@@ -1,0 +1,22 @@
+model      openai:gpt-6.1-terra (effort medium, prompt ts2)
+task       spec-only test suite; score = share of hidden buggy versions caught, if it passes golden
+score      76.9% mean over 13 suites (strict: 0 unless the suite passes golden)
+partial    76.9% mean (tests that fail golden dropped, the rest still count)
+outcomes   graded 10, fails_golden 2, no_answer 1
+cost       $0.8611 (prices in/out per 1M: $2.0 / $10.0)
+
+by seed (strict mean; partial mean; each suite strict/partial; mutants)
+  oc_spi            76.9%   76.9%   FG/0.00 1.00/1.00 1.00/1.00 1.00/1.00 1.00/1.00 1.00/1.00 1.00/1.00 1.00/1.00 1.00/1.00 1.00/1.00 NA FG/0.00 1.00/1.00 40
+
+bugs caught by label (over suites that passed golden)
+  arith_flip       30/30
+  compare_flip     20/20
+  const_change     60/60
+  delete_stmt      50/50
+  drop_not         40/40
+  invert_if        10/10
+  logic_flip       20/20
+  multi2           20/20
+  multi3           40/40
+  multi4           60/60
+  signal_swap      50/50

@@ -3,7 +3,9 @@ get identical inputs every cycle, and every output must match.
 
 Settings come from diff_run.json in the working directory (written by diffcheck.py
 from a seed's diff.json). The golden design defines expected behavior, with two
-exceptions: outputs can be compared only when a condition holds ("compare"), and a
+exceptions: outputs can be compared only when a condition holds ("compare"; the condition
+sees this cycle's inputs and golden outputs by name, and past(n, "input") for inputs n cycles ago;
+a condition can also be {"when": ..., "mask": ...} to compare only some bits), and a
 golden output that is X/Z (undefined) is not checked that cycle.
 """
 
@@ -33,15 +35,33 @@ def value_of(sig):
     return int(v) if v.is_resolvable else None
 
 
-def compare_now(dut, cycle, env, run):
+_CODE = {}
+
+
+def _code(expr):
+    """Compile each compare expression once (they run on every output, every cycle)."""
+    if expr not in _CODE:
+        _CODE[expr] = compile(expr, "<compare>", "eval")
+    return _CODE[expr]
+
+
+def compare_now(dut, cycle, env, run, history=()):
     for o in OUTPUTS:
         cond = CFG.get("compare", {}).get(o, "always")
-        if cond == "never" or (cond != "always" and not eval(cond, {}, env)):
+        past = lambda n, name: history[-n].get(name) if 0 < n <= len(history) else None   # inputs n cycles ago
+        scope = {"past": past, **env}
+        mask = None
+        if isinstance(cond, dict):          # {"when": condition, "mask": expression giving the bits to compare}
+            mask, cond = cond.get("mask"), cond.get("when", "always")
+        if cond == "never" or (cond != "always" and not eval(_code(cond), scope)):
             continue
         ref = value_of(getattr(dut, f"ref_{o}"))
         if ref is None:          # golden output undefined here: don't care
             continue
         got = value_of(getattr(dut, f"dut_{o}"))
+        if mask is not None and got is not None:        # evaluated only once the golden output is defined
+            m = eval(_code(mask), scope)
+            got, ref = got & m, ref & m
         if got != ref:
             shown = {k: v for k, v in env.items() if k in INPUTS}
             raise Mismatch(f"run {run} cycle {cycle}: output {o} = "
@@ -83,6 +103,8 @@ async def run_one(dut, run):
                 break
             t -= p["cycles"]
         env = {}
+        if cycle == 0:
+            history = []
         if rst is not None:
             if reset_left == 0 and started and rng.random() < RESET.get("random_rate", 0.0):
                 reset_left = rng.randrange(1, 3)
@@ -110,7 +132,9 @@ async def run_one(dut, run):
         for o in OUTPUTS:
             env[o] = value_of(getattr(dut, f"ref_{o}"))
         if started or rst is None:
-            compare_now(dut, cycle, env, run)
+            compare_now(dut, cycle, env, run, history)
+        history.append({k: v for k, v in env.items() if k in INPUTS})
+        del history[:-16]
         if CLOCK:
             await RisingEdge(getattr(dut, CLOCK["name"]))
             if in_reset:
