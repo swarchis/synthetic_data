@@ -11,6 +11,7 @@ Each top-level input gets a rule from diff.json; unlisted inputs are random.
 
 Buses: an "apb" section drives PSEL/PENABLE/PWRITE/PADDR/PWDATA with legal
 two-cycle transfers (setup, then access) and idle cycles in between.
+A "wishbone" section does the same for classic Wishbone (see WishboneDriver).
 """
 
 import random
@@ -133,6 +134,106 @@ class ApbDriver:
 
     def reset(self):
         self.phase = "idle"
+        self.pending_init = list(self.init_writes)
+
+    @property
+    def signals(self):
+        return set(self.names.values())
+
+
+class WishboneDriver:
+    """Classic Wishbone single transfers for a slave with a registered ACK (ACK one clock
+    after CYC & STB, and the write taking effect on the edge where ACK is high): each
+    transfer holds CYC, STB, WE, ADR and DAT for 2 cycles, then the bus may idle.
+
+    Config "wishbone": {"addresses": [...], "weights": [...], "p_write": 0.5,
+    "p_idle": 0.3, "data_by_addr": {"4": [...]}, "init_writes": [[adr, data], ...],
+    "phases": [{"transfers": N, "weights": [...]}], "names": {"CYC": "wb_cyc_i", ...},
+    "p_sequence": 0.05, "sequences": [{"weight": 1, "steps": [[3, 160], ["idle", 300], [4, "R"]]}]}.
+    Idle cycles drop CYC or STB (never both high) with junk on the other signals.
+    A sequence is a script played from start to end when chosen: [adr, data] is a write
+    (data "R" = a random byte), ["idle", n] is n idle cycles. Sequences let the stimulus
+    form whole protocol transactions that random traffic would almost never produce."""
+
+    def __init__(self, rule, rng):
+        self.rng = rng
+        self.addrs = rule["addresses"]
+        self.weights = rule.get("weights")
+        self.p_idle = rule.get("p_idle", 0.3)
+        self.p_write = rule.get("p_write", 0.5)
+        self.data_by_addr = {int(k, 0): v for k, v in rule.get("data_by_addr", {}).items()}
+        self.init_writes = rule.get("init_writes", [])
+        self.weight_phases = rule.get("phases", [])
+        self.width = rule.get("data_width", 8)
+        self.sequences = rule.get("sequences", [])
+        self.p_sequence = rule.get("p_sequence", 0.0)
+        self.script = []           # steps left in the current sequence
+        self.idle_left = 0
+        names = {"CYC": "wb_cyc_i", "STB": "wb_stb_i", "WE": "wb_we_i", "ADR": "wb_adr_i", "DAT": "wb_dat_i"}
+        self.names = {**names, **rule.get("names", {})}
+        self.transfers = 0
+        self.pending_init = list(self.init_writes)
+        self.left = 0
+        self.cur = None
+
+    def _new_transfer(self):
+        if self.pending_init:
+            a, data = self.pending_init.pop(0)
+            return {"WE": 1, "ADR": a, "DAT": data}
+        weights = self.weights
+        if self.weight_phases:
+            t = self.transfers % sum(ph["transfers"] for ph in self.weight_phases)
+            for ph in self.weight_phases:
+                if t < ph["transfers"]:
+                    weights = ph["weights"]
+                    break
+                t -= ph["transfers"]
+        self.transfers += 1
+        a = self.rng.choices(self.addrs, weights=weights)[0]
+        write = int(self.rng.random() < self.p_write)
+        if a in self.data_by_addr and self.rng.random() < 0.85:
+            data = self.rng.choice(self.data_by_addr[a])
+        else:
+            data = self.rng.getrandbits(self.width)
+        return {"WE": write, "ADR": a, "DAT": data}
+
+    def _idle(self):
+        n = self.names
+        cyc = self.rng.randrange(2)
+        junk = {"WE": self.rng.randrange(2), "ADR": self.rng.choice(self.addrs), "DAT": self.rng.getrandbits(self.width)}
+        return {n["CYC"]: cyc, n["STB"]: 0 if cyc else self.rng.randrange(2), **{n[k]: v for k, v in junk.items()}}
+
+    def step(self):
+        n = self.names
+        if self.left:
+            self.left -= 1
+            return {n["CYC"]: 1, n["STB"]: 1, **{n[k]: v for k, v in self.cur.items()}}
+        if self.idle_left:
+            self.idle_left -= 1
+            return self._idle()
+        if not self.script and self.sequences and not self.pending_init and self.rng.random() < self.p_sequence:
+            seq = self.rng.choices(self.sequences, weights=[q.get("weight", 1) for q in self.sequences])[0]
+            self.script = list(seq["steps"])
+        if self.script:
+            a, d = self.script.pop(0)
+            if a == "idle":
+                self.idle_left = d - 1
+                return self._idle()
+            self.cur = {"WE": 1, "ADR": a, "DAT": self.rng.getrandbits(self.width) if d == "R" else d}
+            self.left = 1
+            return {n["CYC"]: 1, n["STB"]: 1, **{n[k]: v for k, v in self.cur.items()}}
+        if self.rng.random() < self.p_idle and not self.pending_init:
+            cyc = self.rng.randrange(2)
+            junk = {"WE": self.rng.randrange(2), "ADR": self.rng.choice(self.addrs), "DAT": self.rng.getrandbits(self.width)}
+            return {n["CYC"]: cyc, n["STB"]: 0 if cyc else self.rng.randrange(2), **{n[k]: v for k, v in junk.items()}}
+        self.cur = self._new_transfer()
+        self.left = 1
+        return {n["CYC"]: 1, n["STB"]: 1, **{n[k]: v for k, v in self.cur.items()}}
+
+    def reset(self):
+        self.left = 0
+        self.idle_left = 0
+        self.script = []
         self.pending_init = list(self.init_writes)
 
     @property

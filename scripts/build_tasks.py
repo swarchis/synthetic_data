@@ -53,13 +53,13 @@ def load_seed(seed_dir):
     return meta, design
 
 
-def test_source(source, seed_dir, golden_path=None):
+def test_source(source, seed_dir, golden_path=None, timeout=30):
     """Run the seed's checks on Verilog text: its own tests, plus the differential
     check against the golden design when the seed has a diff.json."""
     with tempfile.NamedTemporaryFile("w", suffix=".v", delete=False) as f:
         f.write(source)
     try:
-        return run_tests(f.name, seed_dir, timeout=30, golden=golden_path)
+        return run_tests(f.name, seed_dir, timeout=timeout, golden=golden_path)
     finally:
         os.unlink(f.name)
 
@@ -120,9 +120,13 @@ def build_seed(seed_dir, args):
         print(f"  SKIP {seed}: golden design {r['status']} {r['failed']}")
         return row, [], []
 
+    # A seed with long differential runs can raise the per-check limit ("timeout", seconds);
+    # otherwise slow-but-correct runs under full load are miscounted as hangs.
+    limit = meta.get("build", {}).get("timeout", 30)
+
     def run_all(sources):
         with ThreadPoolExecutor(args.jobs) as pool:
-            return list(pool.map(lambda s: test_source(s, seed_dir, design), sources))
+            return list(pool.map(lambda s: test_source(s, seed_dir, design, limit), sources))
 
     # Single bugs.
     mutants, row["duplicates"] = mutate(golden)
@@ -232,14 +236,17 @@ def main():
     ap.add_argument("--multi", type=int, default=10, help="max 2-bug and max 3-bug tasks per seed")
     ap.add_argument("--holes", type=int, default=4, help="max completion tasks per hole kind per seed")
     ap.add_argument("--jobs", type=int, default=os.cpu_count(), help="simulations run at once")
+    ap.add_argument("--out", default=str(TASKS), help="output folder (wiped first; default tasks/). To add a "
+                    "seed without rebuilding the rest, build it into another folder and copy its t_* dirs in.")
     args = ap.parse_args()
+    out = Path(args.out)
 
     seed_dirs = [DESIGNS / s for s in args.seeds] if args.seeds else \
         sorted(p.parent for p in DESIGNS.glob("*/meta.json"))
 
-    if TASKS.exists():
-        shutil.rmtree(TASKS)
-    TASKS.mkdir()
+    if out.exists():
+        shutil.rmtree(out)
+    out.mkdir()
 
     rows, all_tasks, survivor_lines = [], [], []
     for seed_dir in seed_dirs:
@@ -253,9 +260,9 @@ def main():
     ids = Counter(t["task_id"] for t in all_tasks)
     assert max(ids.values()) == 1, f"duplicate task ids: {[i for i, c in ids.items() if c > 1]}"
     for t in all_tasks:
-        write_task(t)
+        write_task(t, out)
 
-    (TASKS / "survivors.txt").write_text(
+    (out / "survivors.txt").write_text(
         "# Candidates the tests did NOT catch. Each is either harmless (no real behavior\n"
         "# change, redundant code, or bugs that cancel) or a blind spot in the seed's tests.\n\n"
         + ("\n".join(survivor_lines) or "(none)") + "\n")
@@ -278,8 +285,8 @@ def main():
     table += ["", "by task type:  " + ", ".join(f"{k} {v}" for k, v in sorted(by_type.items())),
               "by label:      " + ", ".join(f"{k} {v}" for k, v in sorted(by_label.items()))]
     report = "\n".join(table) + "\n"
-    (TASKS / "summary.txt").write_text(report)
-    print("\n" + report + f"\nwrote {len(all_tasks)} tasks to tasks/")
+    (out / "summary.txt").write_text(report)
+    print("\n" + report + f"\nwrote {len(all_tasks)} tasks to {out}")
 
 
 if __name__ == "__main__":

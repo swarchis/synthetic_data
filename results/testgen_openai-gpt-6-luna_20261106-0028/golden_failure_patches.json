@@ -1,0 +1,110 @@
+{
+ "ef_gpio8#0|gpio_apb_and_interrupts": [
+  [
+   "    dut.io_in.value = 0xFE\n",
+   "    dut.io_in.value = 0xFE\n    dut.PADDR.value = 0\n"
+  ],
+  [
+   "    await check_reg(dut, 0xFF04, (1 << 0) | (1 << 3) | (1 << 16) | (1 << 24))",
+   "    await check_reg(dut, 0xFF04, (1 << 0) | (1 << 3) | (1 << 8) | (1 << 16) | (1 << 24))"
+  ]
+ ],
+ "ef_gpio8#10|apb_registers_and_outputs": [
+  [
+   "    await expect_read(dut, 0xFF08, 0)\n    await expect_read(dut, 0xFF10, 0)",
+   "    await expect_read(dut, 0xFF08, 0xFF00)\n    await expect_read(dut, 0xFF10, 0)"
+  ]
+ ],
+ "ef_gpio8#10|synchronized_inputs_and_interrupts": [
+  [
+   "    await expect_read(dut, 0xFF04, 0x00000001)\n    assert int(dut.IRQ.value) == 1\n",
+   "    await expect_read(dut, 0xFF04, 0)\n    assert int(dut.IRQ.value) == 0\n"
+  ]
+ ],
+ "ef_gpio8#11|gpio_apb_and_interrupts": [
+  [
+   "    await apb_write(dut, 0xFF0C, 0x00000001)\n    await FallingEdge(dut.PCLK)\n",
+   "    await apb_write(dut, 0xFF0C, 0x00000001)\n"
+  ]
+ ],
+ "ef_gpio8#12|synchronized_inputs_and_interrupts": [
+  [
+   "    assert ris & 0x000000FF == 0x000000FF\n    assert ris & 0x0000FF00 == 0x0000FF00\n",
+   "    assert ris & 0x000000FF == 0x000000FF\n    assert ris & 0x0000FF00 == 0x00005A00\n"
+  ],
+  [
+   "    assert ris & 0x00FF0000 == 0x00FF0000\n    assert ris & 0xFF000000 == 0\n",
+   "    assert ris & 0x00FF0000 == 0x005A0000\n    assert ris & 0xFF000000 == 0\n"
+  ],
+  [
+   "    assert ris & 0x000000FF == 0xFF\n    assert ris & 0x00FF0000 == 0x00FF0000\n",
+   "    assert ris & 0x000000FF == 0xFF\n    assert ris & 0x00FF0000 == 0x005A0000\n"
+  ]
+ ],
+ "ef_gpio8#1|interrupt_status_mask_and_clear": [
+  [
+   "    assert await apb_read(dut, 0xFF08) == expected_after_clear\n\n    # High-level",
+   "    assert await apb_read(dut, 0xFF08) == 0x0000FF81\n\n    # High-level"
+  ]
+ ],
+ "ef_gpio8#1|register_map_and_apb": [
+  [
+   "        0xFF08: 0,\n",
+   "        0xFF08: 0xFF00,\n"
+  ]
+ ],
+ "ef_gpio8#4|gpio_apb_suite": [
+  [
+   "    await check_read(dut, 0x0000, 0)\n    await RisingEdge(dut.PCLK)",
+   "    await check_read(dut, 0x0000, 0xA5)\n    await RisingEdge(dut.PCLK)"
+  ],
+  [
+   "    await Timer(1, unit=\"ns\")\n    await check_read(dut, 0x0000, 0xA5)\n    await RisingEdge(dut.PCLK)\n    await Timer(1, unit=\"ns\")\n    await check_read(dut, 0x0000, 0)\n",
+   "    await Timer(1, unit=\"ns\")\n    await check_read(dut, 0x0000, 0)\n    await RisingEdge(dut.PCLK)\n    await Timer(1, unit=\"ns\")\n    await check_read(dut, 0x0000, 0)\n"
+  ],
+  [
+   "    full_status = rising_status | (0xA5 << 24) | 0xFFFF\n",
+   "    full_status = rising_status | (0xA5 << 24) | 0xFF00\n"
+  ],
+  [
+   "    assert (await apb_read(dut, 0xFF08) & level_bit) == 0\n",
+   "    assert (await apb_read(dut, 0xFF08) & level_bit) != 0\n"
+  ],
+  [
+   "    # Masking affects MIS and IRQ, but not RIS.\n",
+   "    full_status &= ~clear_bit\n    # Masking affects MIS and IRQ, but not RIS.\n"
+  ]
+ ],
+ "ef_gpio8#5|gpio_apb_behavior": [
+  [
+   "    await check_read(dut, 0xFF04, 0)\n    assert int(dut.IRQ.value) == 0\n\n    await apb_write(dut, 0xFF00, (1 << 2)",
+   "    await check_read(dut, 0xFF04, 1 << 18)\n    assert int(dut.IRQ.value) == 1\n\n    await apb_write(dut, 0xFF00, (1 << 2)"
+  ]
+ ],
+ "ef_gpio8#6|gpio_apb_specification": [
+  [
+   "    assert await peek(dut, 0xFF08) == 0\n    assert await peek(dut, 0xFF10) == 0\n    assert await peek(dut, 0xFF0C)",
+   "    assert await peek(dut, 0xFF08) == 0xFF00\n    assert await peek(dut, 0xFF10) == 0\n    assert await peek(dut, 0xFF0C)"
+  ]
+ ],
+ "ef_gpio8#7|interrupts_and_clear": [
+  [
+   "    await expect_read(dut, RIS, 1 << 10)",
+   "    await expect_read(dut, RIS, 0x0000FF00)"
+  ],
+  [
+   "    await apb_write(dut, IM, 0xFFFFFFFF)\n    await expect_read(dut, MIS, 1 << 10)",
+   "    await apb_write(dut, IM, 0xFFFFFFFF)\n    await expect_read(dut, MIS, 0xFF00)"
+  ]
+ ],
+ "ef_gpio8#7|synchronized_inputs": [
+  [
+   "== 0  # PADDR remains",
+   "== expected  # PADDR remains"
+  ],
+  [
+   "    assert int(dut.PRDATA.value) == 0x69\n",
+   "    dut.PADDR.value = DATAI\n    await Timer(1, \"ns\")\n    assert int(dut.PRDATA.value) == 0x69\n"
+  ]
+ ]
+}

@@ -1,0 +1,104 @@
+{
+ "oc_i2c#4|transfers_and_target_memory": [
+  [
+   "assert not (status & 0x02), \"TIP still set at completion\"",
+   "pass  # TIP clears one clock after IF"
+  ]
+ ],
+ "oc_i2c#4|interrupts_bus_state_and_arbitration": [
+  [
+   "assert not (status & 0x02), \"TIP still set at completion\"",
+   "pass  # TIP clears one clock after IF"
+  ]
+ ],
+ "oc_i2c#4|target_reset_domains": [
+  [
+   "assert not (status & 0x02), \"TIP still set at completion\"",
+   "pass  # TIP clears one clock after IF"
+  ]
+ ],
+ "oc_i2c#0|transactions_and_target_memory": [
+  [
+   "assert (status & 0x02) == 0, \"TIP remained set at completion\"",
+   "pass  # TIP clears one clock after IF"
+  ]
+ ],
+ "oc_i2c#0|bus_waveform_busy_and_interrupt": [
+  [
+   "assert (status & 0x02) == 0, \"TIP remained set at completion\"",
+   "pass  # TIP clears one clock after IF"
+  ]
+ ],
+ "oc_i2c#0|arbitration_loss_and_recovery": [
+  [
+   "assert (status & 0x02) == 0, \"TIP remained set at completion\"",
+   "pass  # TIP clears one clock after IF"
+  ]
+ ],
+ "oc_i2c#3|target_register_transfers": [
+  [
+   "\"Wrong received ACK\"\n    assert status & 2 == 0, \"TIP remained set after completion\"",
+   "\"Wrong received ACK\"\n    pass  # TIP clears one clock after IF"
+  ],
+  [
+   "\"Unexpected arbitration loss\"\n    assert status & 2 == 0, \"TIP remained set after completion\"\n    return await",
+   "\"Unexpected arbitration loss\"\n    pass  # TIP clears one clock after IF\n    return await"
+  ]
+ ],
+ "oc_i2c#3|stretching_and_master_reset": [
+  [
+   "\"Wrong received ACK\"\n    assert status & 2 == 0, \"TIP remained set after completion\"",
+   "\"Wrong received ACK\"\n    pass  # TIP clears one clock after IF"
+  ],
+  [
+   "\"Unexpected arbitration loss\"\n    assert status & 2 == 0, \"TIP remained set after completion\"\n    return await",
+   "\"Unexpected arbitration loss\"\n    pass  # TIP clears one clock after IF\n    return await"
+  ]
+ ],
+ "oc_i2c#3|external_clock_stretch": [
+  [
+   "\"Wrong received ACK\"\n    assert status & 2 == 0, \"TIP remained set after completion\"",
+   "\"Wrong received ACK\"\n    pass  # TIP clears one clock after IF"
+  ],
+  [
+   "\"Unexpected arbitration loss\"\n    assert status & 2 == 0, \"TIP remained set after completion\"\n    return await",
+   "\"Unexpected arbitration loss\"\n    pass  # TIP clears one clock after IF\n    return await"
+  ]
+ ],
+ "oc_i2c#8|target_transactions_and_resets": [
+  [
+   "            assert (status & 2) == 0\n",
+   "            pass  # TIP clears one clock after IF\n"
+  ]
+ ],
+ "oc_i2c#8|clock_stretching": [
+  [
+   "            assert (status & 2) == 0\n",
+   "            pass  # TIP clears one clock after IF\n"
+  ]
+ ],
+ "oc_i2c#12|target_burst_and_bus_bits": [
+  [
+   "assert (status & 0x02) == 0, \"TIP remained set after completion\"",
+   "pass  # TIP clears one clock after IF"
+  ]
+ ],
+ "oc_i2c#12|clock_stretch_and_target_reset_scope": [
+  [
+   "assert (status & 0x02) == 0, \"TIP remained set after completion\"",
+   "pass  # TIP clears one clock after IF"
+  ]
+ ],
+ "oc_i2c#2|stretching_and_external_bus": [
+  [
+   "    dut.ext_scl_low.value = 1\n    await b.tick(600)",
+   "    await b.tick(5)\n    dut.ext_scl_low.value = 1\n    await b.tick(600)"
+  ]
+ ],
+ "oc_i2c#5|target_registers_and_repeated_start": [
+  [
+   "        assert status & 0x40 == 0\n",
+   "        pass  # BUSY clears a few clocks after IF\n"
+  ]
+ ]
+}

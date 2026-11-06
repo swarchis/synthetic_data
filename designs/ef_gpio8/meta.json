@@ -1,0 +1,21 @@
+{
+  "name": "ef_gpio8",
+  "description": "Efabless EF_GPIO8 with APB wrapper: 8 GPIO pins with input synchronizers, edge detectors, direction and output registers, 32 level/edge interrupt sources",
+  "source": "https://github.com/efabless/EF_GPIO8 @ 3896b56 + https://github.com/efabless/EF_IP_UTIL @ a2b3fb6",
+  "license": "Apache-2.0 (Efabless Corp.; see LICENSE and NOTICE.md)",
+  "created": "2026-11-05",
+  "kind": "multi_module",
+  "top": "EF_GPIO8_APB",
+  "build": {
+    "presample_per_op": 25,
+    "multi_k": [
+      2,
+      3,
+      4
+    ],
+    "multi_per_k": 10,
+    "multi_cross_module": true,
+    "holes_per_kind": 4,
+    "timeout": 150
+  }
+}

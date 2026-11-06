@@ -1,0 +1,21 @@
+{
+  "name": "oc_i2c",
+  "description": "OpenCores I2C master (Richard Herveille) with Wishbone interface, prescaled SCL generation, glitch filter, clock stretching, multi-master arbitration, plus an in-house register target on a wired-AND bus",
+  "source": "https://github.com/freecores/i2c @ dba90b2 (OpenCores SVN rev 76, rtl/verilog) + in-house i2c_target and i2c_sys",
+  "license": "OpenCores I2C master: Richard Herveille's permissive notice (use and distribution without restriction, notice kept; see NOTICE.md). In-house modules: owned by rtl-env founders.",
+  "created": "2026-11-05",
+  "kind": "multi_module",
+  "top": "i2c_sys",
+  "build": {
+    "presample_per_op": 25,
+    "multi_k": [
+      2,
+      3,
+      4
+    ],
+    "multi_per_k": 10,
+    "multi_cross_module": true,
+    "holes_per_kind": 4,
+    "timeout": 150
+  }
+}

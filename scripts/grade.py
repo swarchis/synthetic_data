@@ -263,7 +263,7 @@ def grade(task_dir, candidate):
                  if "design.v:" in l]
         reason = "\n".join(lines[:10]) or r["log"][-800:]
     elif r["status"] == "timeout":
-        reason = "simulation did not finish in 30s (likely an infinite loop)"
+        reason = "simulation did not finish in time (likely an infinite loop)"
     elif r["status"] == "fail" and any(t.startswith("diff:") for t in r["failed"]):
         from diffcheck import first_mismatch
         reason = first_mismatch(r["log"])

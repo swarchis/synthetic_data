@@ -1,0 +1,118 @@
+{
+ "oc_i2c#7|target_round_trip_and_bus_bits": [
+  [
+   "assert (status & 2) == 0, \"completion while TIP is set\"",
+   "pass  # TIP clears one clock after IF"
+  ],
+  [
+   "assert (status & 0xa2) == 0",
+   "assert (status & 0xa0) == 0"
+  ]
+ ],
+ "oc_i2c#7|bus_busy_and_stretching": [
+  [
+   "assert (status & 2) == 0, \"completion while TIP is set\"",
+   "pass  # TIP clears one clock after IF"
+  ],
+  [
+   "assert (status & 0xa2) == 0",
+   "assert (status & 0xa0) == 0"
+  ]
+ ],
+ "oc_i2c#0|target_transactions": [
+  [
+   "assert not (status & 0x02), \"TIP still set at completion\"",
+   "pass  # TIP clears one clock after IF"
+  ]
+ ],
+ "oc_i2c#2|target_transactions_and_interrupts": [
+  [
+   "assert not (status & 0x02), \"TIP remained set after completion\"",
+   "pass  # TIP clears one clock after IF"
+  ]
+ ],
+ "oc_i2c#2|master_and_target_resets": [
+  [
+   "assert not (status & 0x02), \"TIP remained set after completion\"",
+   "pass  # TIP clears one clock after IF"
+  ]
+ ],
+ "oc_i2c#11|target_registers_and_resets": [
+  [
+   "assert (status & 2) == 0, \"TIP remained set after completion\"",
+   "pass  # TIP clears one clock after IF"
+  ]
+ ],
+ "oc_i2c#11|stretching_and_arbitration": [
+  [
+   "assert (status & 2) == 0, \"TIP remained set after completion\"",
+   "pass  # TIP clears one clock after IF"
+  ]
+ ],
+ "oc_i2c#10|target_transactions_interrupts_and_resets": [
+  [
+   "            assert status & 2 == 0\n            return status",
+   "            return status"
+  ]
+ ],
+ "oc_i2c#10|bus_busy_stretch_and_external_wait": [
+  [
+   "            assert status & 2 == 0\n            return status",
+   "            return status"
+  ]
+ ],
+ "oc_i2c#10|arbitration_loss_and_recovery": [
+  [
+   "            assert status & 2 == 0\n            return status",
+   "            return status"
+  ]
+ ],
+ "oc_i2c#1|target_transactions_interrupt_and_reset": [
+  [
+   "assert (status & 0x02) == 0, \"TIP remained set after completion\"",
+   "pass  # TIP clears one clock after IF"
+  ]
+ ],
+ "oc_i2c#1|external_bus_and_arbitration": [
+  [
+   "assert (status & 0x02) == 0, \"TIP remained set after completion\"",
+   "pass  # TIP clears one clock after IF"
+  ]
+ ],
+ "oc_i2c#9|wishbone_registers_and_bus": [
+  [
+   "assert (status & 2) == 0\n",
+   "pass  # TIP clears one clock after IF\n"
+  ],
+  [
+   "    await ticks(dut, 60)\n    assert (await wb_read(dut, 4)) & 0x40",
+   "    await ticks(dut, 12000)\n    assert (await wb_read(dut, 4)) & 0x40"
+  ]
+ ],
+ "oc_i2c#9|target_transactions_interrupts_and_resets": [
+  [
+   "assert (status & 2) == 0\n",
+   "pass  # TIP clears one clock after IF\n"
+  ],
+  [
+   "    await ticks(dut, 60)\n    assert (await wb_read(dut, 4)) & 0x40",
+   "    await ticks(dut, 12000)\n    assert (await wb_read(dut, 4)) & 0x40"
+  ]
+ ],
+ "oc_i2c#9|stretching_and_arbitration": [
+  [
+   "assert (status & 2) == 0\n",
+   "pass  # TIP clears one clock after IF\n"
+  ],
+  [
+   "    await ticks(dut, 60)\n    assert (await wb_read(dut, 4)) & 0x40",
+   "    await ticks(dut, 12000)\n    assert (await wb_read(dut, 4)) & 0x40"
+  ]
+ ],
+ "oc_i2c#3|target_transactions_and_interrupts": [
+  [
+   "    status = await b.send(0xa2, start=True, stop=True, ack=False)\n    assert status & 0x40 == 0",
+   "    status = await b.send(0xa2, start=True, stop=True, ack=False)\n    await b.tick(50)\n    assert (await b.read(4)) & 0x40 == 0"
+  ]
+ ]
+}

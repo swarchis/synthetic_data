@@ -1,0 +1,37 @@
+grading 12 answers (0 already graded), 10 at a time
+  [1/12] ef_gpio8#2           graded       score 1.00 partial 1.00  caught 40/40
+  [2/12] ef_gpio8#3           graded       score 1.00 partial 1.00  caught 40/40
+  [3/12] ef_gpio8#10          graded       score 1.00 partial 1.00  caught 40/40
+  [4/12] ef_gpio8#1           graded       score 1.00 partial 1.00  caught 40/40
+  [5/12] ef_gpio8#0           graded       score 1.00 partial 1.00  caught 40/40
+  [6/12] ef_gpio8#9           graded       score 1.00 partial 1.00  caught 40/40
+  [7/12] ef_gpio8#6           graded       score 1.00 partial 1.00  caught 40/40
+  [8/12] ef_gpio8#4           graded       score 1.00 partial 1.00  caught 40/40
+  [9/12] ef_gpio8#8           graded       score 1.00 partial 1.00  caught 40/40
+  [10/12] ef_gpio8#5           graded       score 1.00 partial 1.00  caught 40/40
+  [11/12] ef_gpio8#7           graded       score 1.00 partial 1.00  caught 40/40
+  [12/12] ef_gpio8#12          graded       score 1.00 partial 1.00  caught 40/40
+
+model      openai:gpt-6.1-terra (effort medium, prompt ts2)
+task       spec-only test suite; score = share of hidden buggy versions caught, if it passes golden
+score      100.0% mean over 12 suites (strict: 0 unless the suite passes golden)
+partial    100.0% mean (tests that fail golden dropped, the rest still count)
+outcomes   graded 12
+cost       $0.6495 (prices in/out per 1M: $2.0 / $10.0)
+
+by seed (strict mean; partial mean; each suite strict/partial; mutants)
+  ef_gpio8         100.0%  100.0%   1.00/1.00 1.00/1.00 1.00/1.00 1.00/1.00 1.00/1.00 1.00/1.00 1.00/1.00 1.00/1.00 1.00/1.00 1.00/1.00 1.00/1.00 1.00/1.00 40
+
+bugs caught by label (over suites that passed golden)
+  arith_flip       72/72
+  compare_flip     24/24
+  const_change     36/36
+  drop_not         48/48
+  invert_if        24/24
+  logic_flip       48/48
+  multi2           36/36
+  multi3           60/60
+  multi4           48/48
+  signal_swap      24/24
+  state_swap       60/60
+

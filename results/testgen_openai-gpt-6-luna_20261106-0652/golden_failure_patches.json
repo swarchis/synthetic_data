@@ -1,0 +1,124 @@
+{
+ "oc_i2c#3|register_target_write_read_and_stretch": [
+  [
+   "    status = await issue_command(dut, 0x90)  # START + WRITE\n",
+   "    await wb_write(dut, 3, 0xA0)\n    status = await issue_command(dut, 0x90)  # START + WRITE\n"
+  ]
+ ],
+ "oc_i2c#2|i2c_sys_suite": [
+  [
+   "    await ClockCycles(dut.clk, 20)\n    status = await wb_read(dut, 4)\n    assert status & 0x40",
+   "    await ClockCycles(dut.clk, 20000)\n    status = await wb_read(dut, 4)\n    assert status & 0x40"
+  ]
+ ],
+ "oc_i2c#5|target_write_read_stretch_and_interrupt": [
+  [
+   "    assert (status & 0x80) == 0, \"Unexpected arbitration loss during read\"",
+   "    pass  # RxACK holds the master's own NACK after a read"
+  ]
+ ],
+ "oc_i2c#0|wishbone_registers_resets_and_bus_pins": [
+  [
+   "    await wb_write(dut, 4, 0x90)\n    assert await wb_read(dut, 3) == 0x5A",
+   "    await wb_write(dut, 4, 0x90)\n    assert await wb_read(dut, 5) == 0x5A"
+  ]
+ ],
+ "oc_i2c#0|target_write_read_and_clock_stretching": [
+  [
+   "    assert (status & 0x40) == 0, \"BUSY did not clear after STOP\"",
+   "    pass  # BUSY clears a few clocks after IF"
+  ],
+  [
+   "    assert (status & 0x40) == 0, \"BUSY remained set after the final STOP\"",
+   "    pass  # BUSY clears a few clocks after IF (filtered STOP)"
+  ]
+ ],
+ "oc_i2c#4|i2c_sys_suite": [
+  [
+   "    await issue_command(0x40)\n    assert (await wb_read(4)) & 0x40 == 0",
+   "    await issue_command(0x40)\n    for _ in range(20):\n        await wb_read(4)\n    assert (await wb_read(4)) & 0x40 == 0"
+  ],
+  [
+   "        assert (status & 0x80) == 0, \"address write should have been ACKed\"",
+   "        pass  # RxACK holds the master's own NACK after a read"
+  ]
+ ],
+ "oc_i2c#6|i2c_sys_suite": [
+  [
+   "    for value in values:\n        status = await send_byte(dut, value)",
+   "    await send_byte(dut, 0)  # the pointer byte\n    for value in values:\n        status = await send_byte(dut, value)"
+  ]
+ ],
+ "oc_i2c#10|target_register_write_and_read_with_stretching": [
+  [
+   "    status = await issue_command(dut, 0x90)\n    assert status & 0x40\n",
+   "    await wb_write(dut, 3, 0xA0)\n    status = await issue_command(dut, 0x90)\n    assert status & 0x40\n"
+  ],
+  [
+   "    status = await issue_command(dut, 0x40)\n    assert (status & 0x40) == 0",
+   "    status = await issue_command(dut, 0x40)\n    pass  # BUSY clears a few clocks after IF (filtered STOP)"
+  ]
+ ],
+ "oc_i2c#9|wishbone_registers_and_acknowledge": [
+  [
+   "    await FallingEdge(dut.clk)\n    dut.wb_cyc_i.value = 0\n    dut.wb_stb_i.value = 0\n    dut.wb_we_i.value = 0\n\n    # The write takes effect on this edge, when the old acknowledge is high.\n    await RisingEdge(dut.clk)",
+   "    # The write takes effect on this edge, when the old acknowledge is high.\n    await RisingEdge(dut.clk)\n    await FallingEdge(dut.clk)\n    dut.wb_cyc_i.value = 0\n    dut.wb_stb_i.value = 0\n    dut.wb_we_i.value = 0\n    await RisingEdge(dut.clk)"
+  ]
+ ],
+ "oc_i2c#9|stretched_target_register_write_and_read": [
+  [
+   "    await FallingEdge(dut.clk)\n    dut.wb_cyc_i.value = 0\n    dut.wb_stb_i.value = 0\n    dut.wb_we_i.value = 0\n\n    # The write takes effect on this edge, when the old acknowledge is high.\n    await RisingEdge(dut.clk)",
+   "    # The write takes effect on this edge, when the old acknowledge is high.\n    await RisingEdge(dut.clk)\n    await FallingEdge(dut.clk)\n    dut.wb_cyc_i.value = 0\n    dut.wb_stb_i.value = 0\n    dut.wb_we_i.value = 0\n    await RisingEdge(dut.clk)"
+  ],
+  [
+   "    assert (status & 0x01) == 1\n    assert (status & 0x40) == 0",
+   "    assert (status & 0x01) == 1\n    pass  # BUSY clears a few clocks after IF (filtered STOP)"
+  ]
+ ],
+ "oc_i2c#11|wishbone_registers_and_resets": [
+  [
+   "    await wb_write(dut, 3, 0xA6)\n    assert await wb_read(dut, 3) == 0xA6",
+   "    await wb_write(dut, 3, 0xA6)\n    assert await wb_read(dut, 5) == 0xA6"
+  ],
+  [
+   "    await wb_write(dut, 4, 0x08)\n    assert await wb_read(dut, 4) == 0x08",
+   "    await wb_write(dut, 4, 0x08)\n    assert await wb_read(dut, 6) == 0x08"
+  ]
+ ],
+ "oc_i2c#11|bus_busy_and_external_open_drain": [
+  [
+   "    await ClockCycles(dut.clk, 8)\n    assert (await wb_read(dut, 4)) & 0x40\n",
+   "    await ClockCycles(dut.clk, 8)\n    assert not ((await wb_read(dut, 4)) & 0x40)\n"
+  ],
+  [
+   "    dut.ext_sda_low.value = 0\n    dut.ext_scl_low.value = 0",
+   "    await FallingEdge(dut.clk)\n    dut.ext_sda_low.value = 0\n    dut.ext_scl_low.value = 0"
+  ]
+ ],
+ "oc_i2c#11|target_write_then_read_with_stretching": [
+  [
+   "    await wb_write(dut, 2, 0xC0)\n    dut.stretch_en.value = 1\n",
+   "    await wb_write(dut, 2, 0xC0)\n    await FallingEdge(dut.clk)\n    dut.stretch_en.value = 1\n"
+  ],
+  [
+   "    status = await command_and_wait(dut, 0x68)\n    assert (status & 0x40) == 0",
+   "    status = await command_and_wait(dut, 0x68)\n    pass  # BUSY clears a few clocks after IF (filtered STOP)"
+  ]
+ ],
+ "oc_i2c#12|wishbone_registers_and_resets": [
+  [
+   "    await wb_write(dut, 3, 0xD6)\n    assert await wb_read(dut, 3) == 0xD6",
+   "    await wb_write(dut, 3, 0xD6)\n    assert await wb_read(dut, 5) == 0xD6"
+  ]
+ ],
+ "oc_i2c#12|target_write_read_ack_and_busy": [
+  [
+   "    await issue_command(dut, 0x29)  # READ with NACK\n    assert await wb_read(dut, 3) == 0x5A",
+   "    await issue_command(dut, 0x29)  # READ with NACK\n    assert await wb_read(dut, 3) == 0x00  # ptr moved to 3 after the write"
+  ],
+  [
+   "  # ptr moved to 3 after the write\n    status = await wb_read(dut, 4)\n    assert status & 0xE3 == 0x41",
+   "  # ptr moved to 3 after the write\n    status = await wb_read(dut, 4)\n    assert status & 0xE3 == 0xC1  # RxACK = own NACK"
+  ]
+ ]
+}

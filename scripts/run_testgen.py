@@ -38,27 +38,40 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from build_tasks import spread
 from llm import Budget, actual_cost, ask_openai, is_paid, run_pool, worst_case_cost
-from testgen import TIMEOUT, grade_suite, grade_test, header, observable_at_defaults, skeleton
+import textwrap
+
+from testgen import (FORBIDDEN_ATTRS, FORBIDDEN_NAMES, MODULE_API, TIMEOUT, grade_suite, grade_test, header,
+                     observable_at_defaults, skeleton)
 
 ROOT = Path(__file__).resolve().parent.parent
-PROMPT_VERSION = "tg2"   # bug mode (tg2: self._x allowed in the rules text); suite mode below
-SUITE_PROMPT_VERSION = "ts1"
+PROMPT_VERSION = "tg3"         # bug mode. tg3/ts2: the rules list every allowed and banned name
+SUITE_PROMPT_VERSION = "ts2"   # (generated from testgen.py), so nothing is refused unannounced
 MAX_ERRORS_IN_A_ROW = 3
 SYSTEM = "You are an expert digital design and verification engineer."
 
-RULES = """Rules:
-- cocotb 2.1 with Icarus Verilog. The top-level module is `{top}`; use its ports as `dut.<port>`.
-  Internal signal names are not part of the specification: use top-level ports only.
-- Allowed imports: cocotb, cocotb.clock, cocotb.triggers, cocotb.types, cocotb.handle, cocotb.utils,
-  cocotb.queue, random, math, itertools, collections, functools (common public names only).
-  No file, OS, or network access; no eval/exec/getattr/format(); no names or strings with "__";
-  no attributes starting with "_" except dut._log and your own self._x. Files that break
-  these rules score 0.
-- Each run must finish within {timeout} seconds of wall-clock time (keep each test to tens of
-  thousands of clock cycles). Use with_timeout or cycle limits so a hang fails a test instead.
-- Start from the skeleton below; keep, change, or replace its helpers.
-- Reply with the complete test file in a single ```python code block.
-"""
+def _rules():
+    """The prompt's rules, generated from testgen.py's allowlists and banlists so the
+    prompt and the static check can never disagree."""
+    wrap = lambda text: textwrap.fill(text, 96, initial_indent="    ", subsequent_indent="    ")
+    api = "\n".join(wrap(f"{m}: {', '.join(sorted(MODULE_API[m]))}") for m in MODULE_API)
+    return ("Rules:\n"
+            "- cocotb 2.1 with Icarus Verilog. The top-level module is `{top}`; use its ports as `dut.<port>`.\n"
+            "  Internal signal names are not part of the specification: use top-level ports only.\n"
+            "- Allowed imports, and the only names you may use from each (anything else is refused):\n"
+            f"{api}\n"
+            "  Banned builtins:\n"
+            f"{wrap(', '.join(sorted(FORBIDDEN_NAMES)))}\n"
+            "  Banned attributes on any object:\n"
+            f"{wrap(', '.join(sorted(FORBIDDEN_ATTRS)))}\n"
+            "  Also banned: names or strings containing \"__\", attributes starting with \"_\" (except dut._log\n"
+            "  and your own self._x), and any file, OS, or network access. Files that break these rules score 0.\n"
+            "- Each run must finish within {timeout} seconds of wall-clock time (keep each test to tens of\n"
+            "  thousands of clock cycles). Use with_timeout or cycle limits so a hang fails a test instead.\n"
+            "- Start from the skeleton below; keep, change, or replace its helpers.\n"
+            "- Reply with the complete test file in a single ```python code block.\n")
+
+
+RULES = _rules()
 
 PROMPT = """Write cocotb tests for the Verilog design below.
 

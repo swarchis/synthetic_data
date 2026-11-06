@@ -73,12 +73,18 @@ def ask_openai(model, system, user, max_output, effort="medium"):
     body = {"model": model, "instructions": system, "input": user, "max_output_tokens": max_output}
     if effort != "default":
         body["reasoning"] = {"effort": effort}
+    # Background mode: the request returns at once with an id and we poll for the result,
+    # so no connection sits idle for minutes while the model reasons (long idle
+    # connections were being dropped: RemoteDisconnected on long I2C prompts).
+    body["background"] = True
+    auth = {"Authorization": f"Bearer {key}"}
     try:
-        r = post(f"{OPENAI_URL}/responses", body, {"Authorization": f"Bearer {key}"}, 600)
+        r = post(f"{OPENAI_URL}/responses", body, auth, 120)
     except urllib.error.HTTPError as e:
         raise RequestFailed(f"HTTP {e.code}: {e.read().decode(errors='replace')[:300]}")
     except Exception as e:
         raise RequestFailed(f"{type(e).__name__}: {e}")
+    r = wait_response(r, auth)
     answer = "".join(c.get("text", "") for item in r.get("output", []) if item.get("type") == "message"
                      for c in item.get("content", []) if c.get("type") == "output_text")
     usage = r.get("usage")
@@ -90,6 +96,33 @@ def ask_openai(model, system, user, max_output, effort="medium"):
              "hit_token_limit": r.get("status") == "incomplete"
              and (r.get("incomplete_details") or {}).get("reason") == "max_output_tokens"}
     return answer, "", stats
+
+
+def wait_response(r, auth, deadline_s=2400, poll_s=5, max_poll_errors=20):
+    """Poll a background response until it finishes. Transient poll errors are retried;
+    past the deadline the response is cancelled (so it stops costing) and the request fails."""
+    rid, start, errors = r.get("id"), time.time(), 0
+    while r.get("status") in ("queued", "in_progress"):
+        if time.time() - start > deadline_s:
+            try:
+                post(f"{OPENAI_URL}/responses/{rid}/cancel", {}, auth, 60)
+            except Exception:
+                pass
+            raise RequestFailed(f"no result after {deadline_s}s (response {rid} cancelled)")
+        time.sleep(poll_s)
+        try:
+            req = urllib.request.Request(f"{OPENAI_URL}/responses/{rid}", headers=auth)
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                r, errors = json.load(resp), 0
+        except urllib.error.HTTPError as e:
+            raise RequestFailed(f"poll HTTP {e.code}: {e.read().decode(errors='replace')[:300]}")
+        except Exception as e:
+            errors += 1
+            if errors > max_poll_errors:
+                raise RequestFailed(f"polling response {rid} failed {errors} times: {type(e).__name__}: {e}")
+    if r.get("status") in ("failed", "cancelled"):
+        raise RequestFailed(f"response {r.get('status')}: {str(r.get('error'))[:300]}")
+    return r
 
 
 def worst_case_cost(system, user, price_in, price_out, max_output):

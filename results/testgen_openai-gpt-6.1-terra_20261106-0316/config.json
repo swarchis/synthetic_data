@@ -1,0 +1,15 @@
+{
+  "model": "openai:gpt-6.1-terra",
+  "effort": "medium",
+  "mode": "suite",
+  "prompt_version": "ts2",
+  "started": "2026-11-06T03:16:05",
+  "tasks": "/work/tasks",
+  "seeds": "oc_i2c",
+  "per_seed": 5,
+  "samples": 13,
+  "max_output": 24000,
+  "price_in": 2.0,
+  "price_out": 10.0,
+  "budget": 5.0
+}

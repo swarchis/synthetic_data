@@ -1,0 +1,38 @@
+grading 13 answers (0 already graded), 10 at a time
+  [1/13] ef_gpio8#11          fails_golden score 0.00 partial 0.00  fails on the correct design: gpio_apb_and_interrupts; AssertionError: assert (130817 & 1) == 0
+  [2/13] ef_gpio8#9           graded       score 0.70 partial 0.70  caught 28/40
+  [3/13] ef_gpio8#2           graded       score 0.75 partial 0.75  caught 30/40
+  [4/13] ef_gpio8#10          fails_golden score 0.00 partial 0.25  fails on the correct design: apb_registers_and_outputs, synchronized_inputs_and_interrupts; Assertio
+  [5/13] ef_gpio8#0           fails_golden score 0.00 partial 0.00  fails on the correct design: gpio_apb_and_interrupts; AssertionError: assert 3735928559 == 255
+  [6/13] ef_gpio8#12          fails_golden score 0.00 partial 0.35  fails on the correct design: synchronized_inputs_and_interrupts; AssertionError: assert (5921535 & 6
+  [7/13] ef_gpio8#7           fails_golden score 0.00 partial 0.35  fails on the correct design: synchronized_inputs, interrupts_and_clear; AssertionError: read 0x0000f
+  [8/13] ef_gpio8#4           fails_golden score 0.00 partial 0.00  fails on the correct design: gpio_apb_suite; AssertionError: read at 0x00000000: expected 0x00000000
+  [9/13] ef_gpio8#1           fails_golden score 0.00 partial 0.05  fails on the correct design: register_map_and_apb, interrupt_status_mask_and_clear; AssertionError: 
+  [10/13] ef_gpio8#6           fails_golden score 0.00 partial 0.00  fails on the correct design: gpio_apb_specification; AssertionError: assert 65280 == 0
+  [11/13] ef_gpio8#5           fails_golden score 0.00 partial 0.00  fails on the correct design: gpio_apb_behavior; AssertionError: read 0x0000FF04: expected 0x00000000
+  [12/13] ef_gpio8#3           graded       score 0.85 partial 0.85  caught 34/40
+  [13/13] ef_gpio8#8           graded       score 0.78 partial 0.78  caught 31/40
+
+model      openai:gpt-6-luna (effort medium, prompt ts2)
+task       spec-only test suite; score = share of hidden buggy versions caught, if it passes golden
+score      23.7% mean over 13 suites (strict: 0 unless the suite passes golden)
+partial    31.3% mean (tests that fail golden dropped, the rest still count)
+outcomes   fails_golden 9, graded 4
+cost       $0.0884 (prices in/out per 1M: $0.2 / $1.0)
+
+by seed (strict mean; partial mean; each suite strict/partial; mutants)
+  ef_gpio8          23.7%   31.3%   FG/0.00 0.70/0.70 0.75/0.75 FG/0.25 FG/0.00 FG/0.35 FG/0.35 FG/0.00 FG/0.05 FG/0.00 FG/0.00 0.85/0.85 0.78/0.78 40
+
+bugs caught by label (over suites that passed golden)
+  arith_flip       10/24
+  compare_flip     6/8
+  const_change     6/12
+  drop_not         15/16
+  invert_if        8/8
+  logic_flip       13/16
+  multi2           10/12
+  multi3           19/20
+  multi4           16/16
+  signal_swap      1/8
+  state_swap       19/20
+

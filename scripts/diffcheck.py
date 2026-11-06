@@ -20,6 +20,8 @@ diff.json fields:
   phases          optional [{"cycles": N, "inputs": {"<input>": overrides}}], repeated
   compare         {"<output>": "always" | "never" | python expression over signal values}
   cycles, runs    stimulus length per run, number of runs (different random seeds)
+  timeout         optional: seconds allowed for the whole check (raises the caller's limit;
+                  long seeds need it so correct designs never time out under load)
 """
 
 import json
@@ -91,6 +93,7 @@ def diff_check(candidate_src, golden_src, cfg_dir, timeout=120, visible=False):
     settings and seeds the agent never sees."""
     cfg_dir = Path(cfg_dir)
     cfg = json.loads((cfg_dir / "diff.json").read_text())
+    timeout = max(timeout, cfg.get("timeout", 0))
     top = cfg["top"]
     ports, _ = interface(golden_src)[top]
     cfg["inputs"] = [n for n, (d, _) in ports.items() if d == "input"]
