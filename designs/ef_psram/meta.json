@@ -1,0 +1,21 @@
+{
+  "name": "ef_psram",
+  "description": "Efabless EF_PSRAM_CTRL: controller for SPI / QSPI / QPI serial PSRAM and SRAM behind an AHB-Lite slave with wait states, programmable commands, wait cycles and QPI enter/exit commands, byte/half/word lanes",
+  "source": "https://github.com/efabless/EF_PSRAM_CTRL @ 87dbffb",
+  "license": "Apache-2.0 (Efabless); see LICENSE and NOTICE.md",
+  "created": "2026-11-06",
+  "kind": "multi_module",
+  "top": "EF_PSRAM_CTRL_AHBL",
+  "build": {
+    "presample_per_op": 25,
+    "multi_k": [
+      2,
+      3,
+      4
+    ],
+    "multi_per_k": 10,
+    "multi_cross_module": true,
+    "holes_per_kind": 4,
+    "timeout": 150
+  }
+}

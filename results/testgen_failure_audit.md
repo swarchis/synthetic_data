@@ -160,3 +160,35 @@ grader (`getattr`, `.format`), 4 failed golden, each at its first failure on a c
 explicit spec sentence: underflow expected from an exact-zero add (spec: add/subtract never underflow);
 (+0) × (-0) expected +0 (spec: sign is the XOR, -0); qnan expected 0 for qNaN + qNaN (spec: qnan means the
 result is a NaN); and a check of a tiny divide result the spec leaves unspecified. These 4 were not run to the end.
+
+## ef_i2s (new design), 2026-11-06
+
+Spec checked before release by a cycle model (scripts/spec_checks/test_ef_i2s_spec.py): 1.9 million values,
+0 mismatches; the `abs` rule needed forced constant-data runs before a broken variant showed up.
+
+Terra (results/testgen_openai-gpt-6.1-terra_20261106-2012): **92.7% strict**, all 13 suites pass golden.
+Luna (...-luna_20261106-2015): **14.6% strict** (50.0% partial); 10 suites failed golden. **No spec gap seen**,
+but these were examined only at their first failure, not run to the end:
+- 7 suites expect RIS bit 0 (FIFOE) to be 0 when the FIFO is empty; the spec makes it a level condition that
+  sets on every edge while the FIFO is empty (so it is 1 right after reset).
+- 2 suites read RXDATA (once through the alias 0x10000; only PADDR[15:0] is decoded) while the FIFO entry was
+  never written (undefined, X).
+- sck expected as a one-clock pulse every PR+1 clocks; the spec says it toggles (half-period PR+1).
+- a cycle model that skipped the clocks spent inside its own APB writes.
+- a level check right after a refill that had made the FIFO full (full reports level 0, as Luna itself wrote).
+
+## ef_psram (new design), 2026-11-06
+
+Spec checked before release by a cycle model driven by a legal reactive AHB-Lite master
+(scripts/spec_checks/test_ef_psram_spec.py): 359,907 values, 0 mismatches; broken variants caught.
+
+Terra (results/testgen_openai-gpt-6.1-terra_20261106-2007): **75.6% strict**; 10 of 13 suites pass golden.
+2 were refused by the grader (they call `exit`), 1 fails in its own code (`await` on a plain method). One
+request had to be re-asked: the first try produced nothing in 40 minutes and was cancelled by the
+background-mode deadline.
+Luna (...-luna_20261106-2049): **27.7% strict**; 6 suites failed golden, 2 gave no code, 1 refused.
+Examined at the first failure only, **no spec gap seen**: one counted 65 serial clock pulses for an SPI word
+write (simulation shows 64, matching the spec's count formula); several helpers change HWDATA while the slave
+still holds HREADYOUT low, and the spec says configuration registers are written on every edge of a stalled
+data phase, so the registers end up with the wrong value (consistent with the wrong command bits seen;
+not proven by patch-and-rerun).

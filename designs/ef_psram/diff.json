@@ -1,0 +1,193 @@
+{
+  "top": "EF_PSRAM_CTRL_AHBL",
+  "clock": {
+    "name": "HCLK",
+    "period_ns": 10
+  },
+  "reset": {
+    "name": "HRESETn",
+    "active": 0,
+    "cycles": 2,
+    "random_rate": 0.0002
+  },
+  "rules": {
+    "din": {
+      "kind": "random"
+    }
+  },
+  "ahb": {
+    "transfers": [
+      {
+        "weight": 12,
+        "addr_range": [
+          0,
+          8388608
+        ],
+        "write": 0.5,
+        "sizes": [
+          0,
+          1,
+          2,
+          2
+        ]
+      },
+      {
+        "weight": 3,
+        "addr_list": [
+          0,
+          1,
+          2,
+          3,
+          8388604,
+          8388607,
+          4194304,
+          1193046
+        ],
+        "write": 0.5,
+        "sizes": [
+          0,
+          1,
+          2
+        ]
+      },
+      {
+        "weight": 2,
+        "addr_list": [
+          8388864,
+          8389120
+        ],
+        "write": 0.9,
+        "sizes": [
+          2
+        ],
+        "data": [
+          3,
+          2,
+          235,
+          56,
+          11,
+          255,
+          0
+        ]
+      },
+      {
+        "weight": 1,
+        "addr_list": [
+          8389632,
+          8390656
+        ],
+        "write": 0.9,
+        "sizes": [
+          2
+        ],
+        "data": [
+          53,
+          245,
+          90
+        ]
+      },
+      {
+        "weight": 3,
+        "addr_list": [
+          8392704
+        ],
+        "write": 0.9,
+        "sizes": [
+          2
+        ],
+        "data": [
+          0,
+          0,
+          1,
+          2,
+          4,
+          6,
+          15
+        ]
+      },
+      {
+        "weight": 3,
+        "addr_list": [
+          8396800
+        ],
+        "write": 0.9,
+        "sizes": [
+          2
+        ],
+        "data": [
+          0,
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "weight": 1,
+        "addr_list": [
+          8404992,
+          8421376
+        ],
+        "write": 0.9,
+        "sizes": [
+          2
+        ],
+        "data": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "weight": 1,
+        "addr_list": [
+          8389376,
+          8400896,
+          8437760,
+          12582912
+        ],
+        "write": 0.8,
+        "sizes": [
+          2
+        ],
+        "data": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "weight": 1,
+        "addr_range": [
+          0,
+          8388608
+        ],
+        "write": 0.5,
+        "sizes": [
+          3,
+          4,
+          7
+        ]
+      }
+    ],
+    "p_idle": 0.35,
+    "p_unselected": 0.04,
+    "init": [
+      [
+        8396800,
+        0,
+        2
+      ],
+      [
+        8392704,
+        2,
+        2
+      ]
+    ]
+  },
+  "cycles": 30000,
+  "runs": 4,
+  "timeout": 150
+}

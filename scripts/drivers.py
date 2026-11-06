@@ -247,3 +247,67 @@ class WishboneDriver:
 
 def make_rng(seed):
     return random.Random(seed)
+
+
+class AhbLiteDriver:
+    """A legal single-master AHB-Lite master for one slave (HREADY = the slave's HREADYOUT).
+
+    Config "ahb": {"transfers": [{"weight": w, "addr_range": [lo, hi] or "addr_list": [...], "write": p,
+    "sizes": [0, 1, 2], "data": [...] (optional)}], "p_idle": 0.3, "p_unselected": 0.05,
+    "names": {...}, "init": [[addr, data, size], ...] (writes done first)}.
+    Pipelined: a transfer's address phase is followed by its data phase (HWDATA) in the next cycle;
+    while HREADY is low, both phases' signals are held. The driver needs feedback: each cycle the
+    harness passes the golden design's outputs, and HREADY is driven from its HREADYOUT."""
+
+    wants_feedback = True
+
+    def __init__(self, rule, rng):
+        self.rng = rng
+        self.kinds = rule["transfers"]
+        self.p_idle = rule.get("p_idle", 0.3)
+        self.p_unselected = rule.get("p_unselected", 0.05)
+        names = {"HSEL": "HSEL", "HADDR": "HADDR", "HWDATA": "HWDATA", "HTRANS": "HTRANS", "HSIZE": "HSIZE",
+                 "HWRITE": "HWRITE", "HREADY": "HREADY", "HREADYOUT": "HREADYOUT"}
+        self.names = {**names, **rule.get("names", {})}
+        self.init = rule.get("init", [])
+        self.reset()
+
+    def reset(self):
+        self.aphase = None          # transfer in its address phase
+        self.dphase = None          # transfer in its data phase
+        self.prev_ready = 1
+        self.pending_init = list(self.init)
+
+    def _new(self):
+        if self.pending_init:
+            a, d, sz = self.pending_init.pop(0)
+            return {"sel": 1, "trans": 2, "addr": a, "write": 1, "size": sz, "data": d}
+        if self.rng.random() < self.p_idle:
+            return {"sel": int(self.rng.random() < 0.5), "trans": 0, "addr": self.rng.getrandbits(24), "write": self.rng.randrange(2), "size": 2, "data": self.rng.getrandbits(32)}
+        k = self.rng.choices(self.kinds, weights=[x.get("weight", 1) for x in self.kinds])[0]
+        size = self.rng.choice(k.get("sizes", [2]))
+        addr = self.rng.choice(k["addr_list"]) if "addr_list" in k else self.rng.randrange(*k["addr_range"])
+        addr &= ~((1 << size) - 1)
+        data = self.rng.choice(k["data"]) if k.get("data") else self.rng.getrandbits(32)
+        t = {"sel": 1, "trans": 2, "addr": addr, "write": int(self.rng.random() < k.get("write", 0.5)), "size": size, "data": data}
+        if self.rng.random() < self.p_unselected:
+            t["sel"] = 0
+        return t
+
+    def step(self, feedback=None):
+        n = self.names
+        ready = (feedback or {}).get(n["HREADYOUT"])
+        ready = 1 if ready is None else ready
+        if self.prev_ready:              # the previous cycle's edge accepted the address phase
+            self.dphase = self.aphase if (self.aphase and self.aphase["trans"] == 2 and self.aphase["sel"]) else None
+            self.aphase = self._new()
+        self.prev_ready = ready
+        a = self.aphase
+        return {n["HSEL"]: a["sel"], n["HTRANS"]: a["trans"], n["HADDR"]: a["addr"], n["HWRITE"]: a["write"],
+                n["HSIZE"]: a["size"], n["HWDATA"]: self.dphase["data"] if self.dphase else 0,
+                n["HREADY"]: ready}
+
+    @property
+    def signals(self):
+        n = self.names
+        return {n[k] for k in ("HSEL", "HADDR", "HWDATA", "HTRANS", "HSIZE", "HWRITE", "HREADY")}

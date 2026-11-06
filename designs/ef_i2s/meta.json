@@ -1,0 +1,21 @@
+{
+  "name": "ef_i2s",
+  "description": "Efabless EF_I2S: I2S microphone master receiver (generated SCK/WS, I2S or left-justified framing), programmable sample size and sign extension, channel selection, 16-entry FIFO, average-magnitude and zero-crossing voice-activity detectors, 6 interrupt sources, APB",
+  "source": "https://github.com/efabless/EF_I2S @ d335705 + https://github.com/efabless/EF_IP_UTIL @ a2b3fb6",
+  "license": "Apache-2.0 (Efabless); see LICENSE and NOTICE.md",
+  "created": "2026-11-06",
+  "kind": "multi_module",
+  "top": "EF_I2S_APB",
+  "build": {
+    "presample_per_op": 25,
+    "multi_k": [
+      2,
+      3,
+      4
+    ],
+    "multi_per_k": 10,
+    "multi_cross_module": true,
+    "holes_per_kind": 4,
+    "timeout": 150
+  }
+}

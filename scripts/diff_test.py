@@ -17,7 +17,7 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, FallingEdge, ReadOnly, RisingEdge, Timer
 
-from drivers import ApbDriver, InputGen, WishboneDriver, make_rng
+from drivers import AhbLiteDriver, ApbDriver, InputGen, WishboneDriver, make_rng
 
 CFG = json.loads(Path("diff_run.json").read_text())
 PARAMS = json.loads(os.environ.get("RTL_PARAMS", "{}"))
@@ -75,7 +75,7 @@ async def run_one(dut, run):
     special = {RESET["name"]} if RESET else set()
     if CLOCK:
         special.add(CLOCK["name"])
-    apb = (ApbDriver(CFG["apb"], rng) if CFG.get("apb")          # the bus driver, if the design has a bus
+    apb = (AhbLiteDriver(CFG["ahb"], rng) if CFG.get("ahb") else ApbDriver(CFG["apb"], rng) if CFG.get("apb")          # the bus driver, if the design has a bus
            else WishboneDriver(CFG["wishbone"], rng) if CFG.get("wishbone") else None)
     bus = apb.signals if apb else set()
     gens = {n: InputGen(rules.get(n, CFG.get("default_input", {"kind": "random"})), len(getattr(dut, n)), rng)
@@ -122,7 +122,8 @@ async def run_one(dut, run):
             getattr(dut, n).value = v
             env[n] = v
         if apb:
-            for n, v in apb.step().items():
+            fb = {o: value_of(getattr(dut, f"ref_{o}")) for o in OUTPUTS} if getattr(apb, "wants_feedback", False) else None
+            for n, v in (apb.step(fb) if fb is not None else apb.step()).items():
                 getattr(dut, n).value = v
                 env[n] = v
         if CLOCK:
